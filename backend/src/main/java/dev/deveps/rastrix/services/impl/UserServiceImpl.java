@@ -2,6 +2,7 @@ package dev.deveps.rastrix.services.impl;
 
 import dev.deveps.rastrix.dto.request.UserRequest;
 import dev.deveps.rastrix.dto.response.UserResponse;
+import dev.deveps.rastrix.entities.Role;
 import dev.deveps.rastrix.entities.User;
 import dev.deveps.rastrix.exception.DuplicateResourceException;
 import dev.deveps.rastrix.exception.ResourceNotFoundException;
@@ -33,6 +34,7 @@ public class UserServiceImpl implements UserService {
                 .password(passwordEncoder.encode(request.password()))
                 .avatarUrl(request.avatarUrl())
                 .active(request.active())
+                .role(Role.USER)
                 .build();
         return toResponse(userRepository.save(user));
     }
@@ -48,6 +50,13 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setAvatarUrl(request.avatarUrl());
         user.setActive(request.active());
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    public UserResponse updateRole(Long id, Role role) {
+        User user = findEntityById(id);
+        user.setRole(role);
         return toResponse(userRepository.save(user));
     }
 
@@ -99,6 +108,7 @@ public class UserServiceImpl implements UserService {
                 user.getEmail(),
                 user.getAvatarUrl(),
                 user.isActive(),
+                user.getRole(),
                 user.getFechaCreacion(),
                 user.getFechaActualizacion()
         );

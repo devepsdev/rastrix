@@ -14,4 +14,6 @@ public interface MarketRepository extends JpaRepository<Market, Long> {
 
     List<Market> findByProvince(String province);
 
+    long countByActiveTrue();
+
 }

@@ -1,7 +1,9 @@
 package dev.deveps.rastrix.security;
 
+import dev.deveps.rastrix.entities.Role;
 import dev.deveps.rastrix.entities.User;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
@@ -27,9 +29,21 @@ public class UserPrincipal implements UserDetails {
         return user.getName();
     }
 
+    public Role getRole() {
+        return user.getRole();
+    }
+
+    public boolean isAdmin() {
+        return user.getRole() == Role.ADMIN;
+    }
+
+    public boolean isSelfOrAdmin(Long userId) {
+        return isAdmin() || getId().equals(userId);
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
     }
 
     @Override

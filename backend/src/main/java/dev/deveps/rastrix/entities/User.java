@@ -2,6 +2,8 @@ package dev.deveps.rastrix.entities;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,5 +34,9 @@ public class User extends BaseEntity {
 
     @Column(name = "activo")
     private boolean active;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 10)
+    private Role role;
 
 }
