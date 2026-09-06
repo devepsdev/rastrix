@@ -15,14 +15,15 @@ USE rastrix;
 -- Usuarios registrados en la app (para login, favoritos, valoraciones)
 -- ---------------------------------------------------------------------
 CREATE TABLE usuarios (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE,
     nombre VARCHAR(100) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     avatar_url VARCHAR(255) DEFAULT NULL,
-    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
-    activo TINYINT(1) DEFAULT 1
+    activo TINYINT(1) DEFAULT 1,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -31,11 +32,13 @@ CREATE TABLE usuarios (
 -- (muebles, monedas, relojes, etc.)
 -- ---------------------------------------------------------------------
 CREATE TABLE categorias (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE,
     nombre VARCHAR(80) NOT NULL UNIQUE,
     descripcion VARCHAR(255) DEFAULT NULL,
-    icono VARCHAR(100) DEFAULT NULL
+    icono VARCHAR(100) DEFAULT NULL,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- ---------------------------------------------------------------------
@@ -43,7 +46,7 @@ CREATE TABLE categorias (
 -- Información principal de cada mercado de antigüedades
 -- ---------------------------------------------------------------------
 CREATE TABLE mercados (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE,
     nombre VARCHAR(150) NOT NULL,
     descripcion TEXT,
@@ -76,9 +79,12 @@ CREATE TABLE mercados (
 -- Tabla: mercado_categorias (relación N:M entre mercados y categorías)
 -- ---------------------------------------------------------------------
 CREATE TABLE mercado_categorias (
-    mercado_id INT NOT NULL,
-    categoria_id INT NOT NULL,
-    PRIMARY KEY (mercado_id, categoria_id),
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE,
+    mercado_id BIGINT NOT NULL,
+    categoria_id BIGINT NOT NULL,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unico_mercado_categoria (mercado_id, categoria_id),
     FOREIGN KEY (mercado_id) REFERENCES mercados(id) ON DELETE CASCADE,
     FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
@@ -88,12 +94,13 @@ CREATE TABLE mercado_categorias (
 -- Galería de fotos de cada mercado
 -- ---------------------------------------------------------------------
 CREATE TABLE imagenes_mercado (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE,
-    mercado_id INT NOT NULL,
+    mercado_id BIGINT NOT NULL,
     url_imagen VARCHAR(255) NOT NULL,
     orden INT DEFAULT 0,
-    fecha_subida DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (mercado_id) REFERENCES mercados(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -102,13 +109,15 @@ CREATE TABLE imagenes_mercado (
 -- Vendedores/puestos que participan en los mercados
 -- ---------------------------------------------------------------------
 CREATE TABLE expositores (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE,
-    mercado_id INT DEFAULT NULL,
+    mercado_id BIGINT DEFAULT NULL,
     nombre VARCHAR(150) NOT NULL,
     especialidad VARCHAR(150) DEFAULT NULL,
     descripcion TEXT,
     contacto VARCHAR(150) DEFAULT NULL,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (mercado_id) REFERENCES mercados(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
@@ -117,11 +126,12 @@ CREATE TABLE expositores (
 -- Mercados marcados como favoritos por cada usuario
 -- ---------------------------------------------------------------------
 CREATE TABLE favoritos (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE,
-    usuario_id INT NOT NULL,
-    mercado_id INT NOT NULL,
-    fecha_agregado DATETIME DEFAULT CURRENT_TIMESTAMP,
+    usuario_id BIGINT NOT NULL,
+    mercado_id BIGINT NOT NULL,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unico_favorito (usuario_id, mercado_id),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (mercado_id) REFERENCES mercados(id) ON DELETE CASCADE
@@ -132,13 +142,14 @@ CREATE TABLE favoritos (
 -- Puntuaciones y comentarios de usuarios sobre un mercado
 -- ---------------------------------------------------------------------
 CREATE TABLE valoraciones (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE,
-    usuario_id INT NOT NULL,
-    mercado_id INT NOT NULL,
-    puntuacion TINYINT NOT NULL,
+    usuario_id BIGINT NOT NULL,
+    mercado_id BIGINT NOT NULL,
+    puntuacion INT NOT NULL,
     comentario TEXT,
-    fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unica_valoracion (usuario_id, mercado_id),
     CHECK (puntuacion BETWEEN 1 AND 5),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -150,29 +161,15 @@ CREATE TABLE valoraciones (
 -- Avisos enviados a los usuarios (nuevo mercado, recordatorio, etc.)
 -- ---------------------------------------------------------------------
 CREATE TABLE notificaciones (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     uuid CHAR(36) NOT NULL UNIQUE,
-    usuario_id INT NOT NULL,
-    mercado_id INT DEFAULT NULL,
+    usuario_id BIGINT NOT NULL,
+    mercado_id BIGINT DEFAULT NULL,
     titulo VARCHAR(150) NOT NULL,
     mensaje TEXT,
     leida TINYINT(1) DEFAULT 0,
-    fecha_envio DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (mercado_id) REFERENCES mercados(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
-
--- =====================================================================
--- Datos de ejemplo: categorías típicas de antigüedades
--- =====================================================================
-INSERT INTO categorias (nombre, descripcion) VALUES
-('Muebles', 'Muebles antiguos y de época'),
-('Monedas y billetes', 'Numismática'),
-('Libros y revistas', 'Libros antiguos, revistas y publicaciones'),
-('Relojes', 'Relojes de bolsillo, pared y pulsera'),
-('Joyas y bisutería', 'Piezas de joyería antigua'),
-('Arte y pintura', 'Cuadros, grabados y obras de arte'),
-('Porcelana y cerámica', 'Vajillas y piezas decorativas'),
-('Vinilos y discos', 'Música en formatos antiguos'),
-('Juguetes antiguos', 'Juguetes de colección'),
-('Militaria', 'Objetos militares históricos');
