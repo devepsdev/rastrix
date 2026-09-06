@@ -94,6 +94,7 @@ run_mysql() {
 # Cargar valores de un despliegue anterior (si existen) como defaults
 # ---------------------------------------------------------------------------
 
+SERVER_PORT="$(get_env_value SERVER_PORT)"
 DB_HOST="$(get_env_value DB_HOST)"
 DB_PORT="$(get_env_value DB_PORT)"
 DB_USERNAME="$(get_env_value DB_USERNAME)"
@@ -104,9 +105,17 @@ ADMIN_EMAIL="$(get_env_value ADMIN_EMAIL)"
 ADMIN_PASSWORD="$(get_env_value ADMIN_PASSWORD)"
 
 # ---------------------------------------------------------------------------
+# Puerto de la aplicación
+# ---------------------------------------------------------------------------
+
+echo "== Aplicación =="
+prompt SERVER_PORT "Puerto en el que escuchará Rastrix (detrás del proxy inverso)" "${SERVER_PORT:-8080}"
+
+# ---------------------------------------------------------------------------
 # Credenciales de la base de datos
 # ---------------------------------------------------------------------------
 
+echo
 echo "== Base de datos MySQL =="
 prompt DB_HOST "Host de MySQL" "${DB_HOST:-localhost}"
 prompt DB_PORT "Puerto de MySQL" "${DB_PORT:-3306}"
@@ -207,6 +216,7 @@ umask 077
 cat > "$ENV_FILE" <<EOF
 # Generado por deploy.sh el $(date -Iseconds). No compartir ni versionar este fichero.
 SPRING_PROFILES_ACTIVE=prod
+SERVER_PORT=$SERVER_PORT
 DB_HOST=$DB_HOST
 DB_PORT=$DB_PORT
 DB_NAME=$DB_NAME

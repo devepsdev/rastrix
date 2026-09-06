@@ -8,6 +8,6 @@ public interface AuthService {
 
     AuthResponse register(UserRequest request);
 
-    AuthResponse login(LoginRequest request);
+    AuthResponse login(LoginRequest request, String clientIp);
 
 }
