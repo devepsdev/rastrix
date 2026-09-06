@@ -8,6 +8,7 @@ import dev.deveps.rastrix.exception.ResourceNotFoundException;
 import dev.deveps.rastrix.repositories.UserRepository;
 import dev.deveps.rastrix.services.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.util.List;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public UserResponse create(UserRequest request) {
@@ -28,7 +30,7 @@ public class UserServiceImpl implements UserService {
         User user = User.builder()
                 .name(request.name())
                 .email(request.email())
-                .password(request.password())
+                .password(passwordEncoder.encode(request.password()))
                 .avatarUrl(request.avatarUrl())
                 .active(request.active())
                 .build();
@@ -43,7 +45,7 @@ public class UserServiceImpl implements UserService {
         }
         user.setName(request.name());
         user.setEmail(request.email());
-        user.setPassword(request.password());
+        user.setPassword(passwordEncoder.encode(request.password()));
         user.setAvatarUrl(request.avatarUrl());
         user.setActive(request.active());
         return toResponse(userRepository.save(user));
