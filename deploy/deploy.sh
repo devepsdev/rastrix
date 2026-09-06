@@ -206,6 +206,7 @@ mkdir -p "$(dirname "$ENV_FILE")"
 umask 077
 cat > "$ENV_FILE" <<EOF
 # Generado por deploy.sh el $(date -Iseconds). No compartir ni versionar este fichero.
+SPRING_PROFILES_ACTIVE=prod
 DB_HOST=$DB_HOST
 DB_PORT=$DB_PORT
 DB_NAME=$DB_NAME
