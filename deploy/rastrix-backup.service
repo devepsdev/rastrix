@@ -1,0 +1,7 @@
+[Unit]
+Description=Backup de la base de datos de Rastrix
+After=mysql.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/rastrix/backup-db.sh
