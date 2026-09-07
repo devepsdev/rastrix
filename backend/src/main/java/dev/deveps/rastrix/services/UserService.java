@@ -1,5 +1,7 @@
 package dev.deveps.rastrix.services;
 
+import dev.deveps.rastrix.dto.request.ChangePasswordRequest;
+import dev.deveps.rastrix.dto.request.UpdateProfileRequest;
 import dev.deveps.rastrix.dto.request.UserRequest;
 import dev.deveps.rastrix.dto.response.UserResponse;
 import dev.deveps.rastrix.entities.Role;
@@ -10,7 +12,9 @@ public interface UserService {
 
     UserResponse create(UserRequest request);
 
-    UserResponse update(Long id, UserRequest request);
+    UserResponse updateProfile(Long id, UpdateProfileRequest request);
+
+    void changePassword(Long id, ChangePasswordRequest request);
 
     UserResponse updateRole(Long id, Role role);
 

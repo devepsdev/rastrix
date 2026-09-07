@@ -1,7 +1,8 @@
 package dev.deveps.rastrix.controllers;
 
+import dev.deveps.rastrix.dto.request.ChangePasswordRequest;
+import dev.deveps.rastrix.dto.request.UpdateProfileRequest;
 import dev.deveps.rastrix.dto.request.UpdateRoleRequest;
-import dev.deveps.rastrix.dto.request.UserRequest;
 import dev.deveps.rastrix.dto.response.UserResponse;
 import dev.deveps.rastrix.security.UserPrincipal;
 import dev.deveps.rastrix.services.UserService;
@@ -34,9 +35,17 @@ public class UserController {
 
     @PutMapping("/me")
     public UserResponse updateMyProfile(
-            @Valid @RequestBody UserRequest request,
+            @Valid @RequestBody UpdateProfileRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return userService.update(principal.getId(), request);
+        return userService.updateProfile(principal.getId(), request);
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<Void> changeMyPassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        userService.changePassword(principal.getId(), request);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/me")

@@ -1,10 +1,13 @@
 package dev.deveps.rastrix.services.impl;
 
+import dev.deveps.rastrix.dto.request.ChangePasswordRequest;
+import dev.deveps.rastrix.dto.request.UpdateProfileRequest;
 import dev.deveps.rastrix.dto.request.UserRequest;
 import dev.deveps.rastrix.dto.response.UserResponse;
 import dev.deveps.rastrix.entities.Role;
 import dev.deveps.rastrix.entities.User;
 import dev.deveps.rastrix.exception.DuplicateResourceException;
+import dev.deveps.rastrix.exception.InvalidDataException;
 import dev.deveps.rastrix.exception.ResourceNotFoundException;
 import dev.deveps.rastrix.repositories.UserRepository;
 import dev.deveps.rastrix.services.UserService;
@@ -40,17 +43,25 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponse update(Long id, UserRequest request) {
+    public UserResponse updateProfile(Long id, UpdateProfileRequest request) {
         User user = findEntityById(id);
         if (!user.getEmail().equalsIgnoreCase(request.email()) && userRepository.existsByEmail(request.email())) {
             throw new DuplicateResourceException("Ya existe un usuario registrado con el email: " + request.email());
         }
         user.setName(request.name());
         user.setEmail(request.email());
-        user.setPassword(passwordEncoder.encode(request.password()));
         user.setAvatarUrl(request.avatarUrl());
-        user.setActive(request.active());
         return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    public void changePassword(Long id, ChangePasswordRequest request) {
+        User user = findEntityById(id);
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+            throw new InvalidDataException("La contraseña actual no es correcta");
+        }
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 
     @Override
