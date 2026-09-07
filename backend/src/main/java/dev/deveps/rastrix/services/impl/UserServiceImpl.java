@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -70,6 +72,14 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void overwritePassword(Long id, String newPassword) {
+        User user = findEntityById(id);
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        refreshTokenService.revokeAllForUser(id);
+    }
+
+    @Override
     public UserResponse updateRole(Long id, Role role) {
         User user = findEntityById(id);
         user.setRole(role);
@@ -101,6 +111,12 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByEmail(email)
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe ningún usuario con email: " + email));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UserResponse> findByEmailOptional(String email) {
+        return userRepository.findByEmail(email).map(this::toResponse);
     }
 
     @Override

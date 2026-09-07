@@ -2,10 +2,10 @@
 #
 # Backup de la base de datos de Rastrix. Pensado para ejecutarse como root vía
 # el temporizador systemd rastrix-backup.timer (instalado por deploy.sh), pero
-# se puede lanzar a mano en cualquier momento: sudo /opt/rastrix/backup-db.sh
+# se puede lanzar a mano en cualquier momento: sudo /opt/apps/rastrix/backup-db.sh
 #
 # Lee las credenciales del mismo fichero que usa la aplicación
-# (/etc/rastrix/rastrix.env) y vuelca la base de datos comprimida en
+# (/opt/apps/rastrix/rastrix.env) y vuelca la base de datos comprimida en
 # /var/backups/rastrix/, con rotación automática (se conservan los últimos
 # BACKUP_RETENTION_DAYS días, 14 por defecto).
 #
@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-ENV_FILE="/etc/rastrix/rastrix.env"
+ENV_FILE="/opt/apps/rastrix/rastrix.env"
 BACKUP_DIR="/var/backups/rastrix"
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-14}"
 

@@ -1,7 +1,9 @@
 package dev.deveps.rastrix.controllers;
 
+import dev.deveps.rastrix.dto.request.ForgotPasswordRequest;
 import dev.deveps.rastrix.dto.request.LoginRequest;
 import dev.deveps.rastrix.dto.request.RefreshTokenRequest;
+import dev.deveps.rastrix.dto.request.ResetPasswordRequest;
 import dev.deveps.rastrix.dto.request.UserRequest;
 import dev.deveps.rastrix.dto.response.AuthResponse;
 import dev.deveps.rastrix.services.AuthService;
@@ -40,6 +42,19 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
         authService.logout(request.refreshToken());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request, HttpServletRequest httpRequest) {
+        authService.forgotPassword(request.email(), httpRequest.getRemoteAddr());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
         return ResponseEntity.noContent().build();
     }
 

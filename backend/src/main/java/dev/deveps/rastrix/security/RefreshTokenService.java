@@ -9,14 +9,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Base64;
-import java.util.HexFormat;
 
 /**
  * Genera y valida los refresh tokens que permiten renovar el JWT de acceso
@@ -46,7 +42,7 @@ public class RefreshTokenService {
         String rawToken = generateRawToken();
         RefreshToken entity = RefreshToken.builder()
                 .userId(userId)
-                .tokenHash(hash(rawToken))
+                .tokenHash(HashUtils.sha256(rawToken))
                 .expiresAt(LocalDateTime.now().plus(Duration.ofMillis(refreshExpirationMs)))
                 .revoked(false)
                 .build();
@@ -60,7 +56,7 @@ public class RefreshTokenService {
      */
     @Transactional
     public RefreshToken consumeAndRotate(String rawToken) {
-        RefreshToken existing = refreshTokenRepository.findByTokenHash(hash(rawToken))
+        RefreshToken existing = refreshTokenRepository.findByTokenHash(HashUtils.sha256(rawToken))
                 .orElseThrow(() -> new InvalidRefreshTokenException("El refresh token no es válido"));
 
         if (existing.isRevoked()) {
@@ -77,7 +73,7 @@ public class RefreshTokenService {
 
     @Transactional
     public void revoke(String rawToken) {
-        refreshTokenRepository.findByTokenHash(hash(rawToken))
+        refreshTokenRepository.findByTokenHash(HashUtils.sha256(rawToken))
                 .ifPresent(token -> {
                     token.setRevoked(true);
                     refreshTokenRepository.save(token);
@@ -99,16 +95,6 @@ public class RefreshTokenService {
         byte[] bytes = new byte[32];
         SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private String hash(String rawToken) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hashBytes);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 no disponible en esta JVM", e);
-        }
     }
 
 }

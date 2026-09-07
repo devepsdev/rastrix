@@ -8,6 +8,8 @@ import dev.deveps.rastrix.dto.response.UserResponse;
 import dev.deveps.rastrix.entities.Role;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Optional;
+
 public interface UserService {
 
     UserResponse create(UserRequest request);
@@ -15,6 +17,12 @@ public interface UserService {
     UserResponse updateProfile(Long id, UpdateProfileRequest request);
 
     void changePassword(Long id, ChangePasswordRequest request);
+
+    /**
+     * Fija una nueva contraseña sin comprobar la actual (para el flujo de
+     * "he olvidado mi contraseña", donde por definición no se conoce).
+     */
+    void overwritePassword(Long id, String newPassword);
 
     UserResponse updateRole(Long id, Role role);
 
@@ -25,6 +33,12 @@ public interface UserService {
     UserResponse findByUuid(String uuid);
 
     UserResponse findByEmail(String email);
+
+    /**
+     * Como findByEmail, pero sin lanzar excepción si no existe: para flujos
+     * donde no se debe revelar si un email está registrado o no.
+     */
+    Optional<UserResponse> findByEmailOptional(String email);
 
     PageResponse<UserResponse> findAll(Pageable pageable);
 

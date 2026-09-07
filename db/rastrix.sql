@@ -192,3 +192,22 @@ CREATE TABLE refresh_tokens (
     INDEX idx_refresh_usuario (usuario_id),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Tabla: password_reset_tokens
+-- Código de 6 dígitos enviado por email para recuperar la contraseña.
+-- Se guarda el hash SHA-256 del código, nunca el valor en claro.
+-- ---------------------------------------------------------------------
+CREATE TABLE password_reset_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE,
+    usuario_id BIGINT NOT NULL,
+    code_hash CHAR(64) NOT NULL,
+    fecha_expiracion DATETIME NOT NULL,
+    usado TINYINT(1) NOT NULL DEFAULT 0,
+    intentos INT NOT NULL DEFAULT 0,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_pwreset_usuario (usuario_id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

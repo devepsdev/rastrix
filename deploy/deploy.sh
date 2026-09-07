@@ -3,10 +3,11 @@
 # Despliegue de Rastrix en un servidor Ubuntu Server con MySQL.
 #
 # Pide las credenciales de la base de datos y del usuario administrador,
-# las guarda en /etc/rastrix/rastrix.env (solo legibles por root y el
-# usuario de servicio), compila el backend y lo deja corriendo como
-# servicio systemd (rastrix.service), que se reinicia solo si el proceso
-# muere o el servidor arranca.
+# las guarda en /opt/apps/rastrix/rastrix.env (permisos 640, solo legible
+# por root y el usuario de servicio — nunca dentro del .service de systemd,
+# que sí es legible por cualquier usuario del sistema), compila el backend
+# y lo deja corriendo como servicio systemd (rastrix.service), que se
+# reinicia solo si el proceso muere o el servidor arranca.
 #
 # Uso: sudo ./deploy/deploy.sh   (ejecutar desde una copia del repositorio)
 #
@@ -21,8 +22,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BACKEND_DIR="$REPO_ROOT/backend"
 SCHEMA_FILE="$REPO_ROOT/db/rastrix.sql"
 
-ENV_FILE="/etc/rastrix/rastrix.env"
-INSTALL_DIR="/opt/rastrix"
+INSTALL_DIR="/opt/apps/rastrix"
+ENV_FILE="$INSTALL_DIR/rastrix.env"
 SERVICE_FILE="/etc/systemd/system/rastrix.service"
 SERVICE_USER="rastrix"
 DB_NAME="rastrix"
@@ -103,6 +104,8 @@ JWT_SECRET="$(get_env_value JWT_SECRET)"
 ADMIN_NAME="$(get_env_value ADMIN_NAME)"
 ADMIN_EMAIL="$(get_env_value ADMIN_EMAIL)"
 ADMIN_PASSWORD="$(get_env_value ADMIN_PASSWORD)"
+MAIL_USERNAME="$(get_env_value MAIL_USERNAME)"
+MAIL_PASSWORD="$(get_env_value MAIL_PASSWORD)"
 
 # ---------------------------------------------------------------------------
 # Puerto de la aplicación
@@ -206,12 +209,34 @@ while true; do
 done
 
 # ---------------------------------------------------------------------------
+# Correo (SMTP de Gmail, para el código de recuperación de contraseña)
+# ---------------------------------------------------------------------------
+
+echo
+echo "== Correo (Gmail) =="
+prompt MAIL_USERNAME "Cuenta de Gmail remitente" "${MAIL_USERNAME:-devepsdev@gmail.com}"
+
+while true; do
+    mail_pw_message="Contraseña de aplicación de Gmail para '$MAIL_USERNAME'"
+    [[ -n "$MAIL_PASSWORD" ]] && mail_pw_message="$mail_pw_message (deja en blanco para mantener la actual)"
+    prompt_secret MAIL_PASSWORD_INPUT "$mail_pw_message"
+    if [[ -n "$MAIL_PASSWORD_INPUT" ]]; then
+        MAIL_PASSWORD="$MAIL_PASSWORD_INPUT"
+        break
+    elif [[ -n "$MAIL_PASSWORD" ]]; then
+        break
+    else
+        echo "La contraseña no puede estar vacía (genera una en https://myaccount.google.com/apppasswords)."
+    fi
+done
+
+# ---------------------------------------------------------------------------
 # Guardar credenciales
 # ---------------------------------------------------------------------------
 
 echo
 echo "Guardando credenciales en $ENV_FILE..."
-mkdir -p "$(dirname "$ENV_FILE")"
+mkdir -p "$INSTALL_DIR"
 umask 077
 cat > "$ENV_FILE" <<EOF
 # Generado por deploy.sh el $(date -Iseconds). No compartir ni versionar este fichero.
@@ -226,12 +251,19 @@ JWT_SECRET=$JWT_SECRET
 ADMIN_NAME=$ADMIN_NAME
 ADMIN_EMAIL=$ADMIN_EMAIL
 ADMIN_PASSWORD=$ADMIN_PASSWORD
+MAIL_USERNAME=$MAIL_USERNAME
+MAIL_PASSWORD=$MAIL_PASSWORD
 EOF
 
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
     echo "Creando usuario de sistema '$SERVICE_USER'..."
     useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
 fi
+
+# El directorio en sí también queda cerrado a terceros: root y el grupo del
+# servicio pueden entrar y listar, el resto de usuarios del sistema no.
+chown root:"$SERVICE_USER" "$INSTALL_DIR"
+chmod 750 "$INSTALL_DIR"
 chown root:"$SERVICE_USER" "$ENV_FILE"
 chmod 640 "$ENV_FILE"
 
@@ -250,9 +282,11 @@ if [[ -z "$JAR_FILE" ]]; then
 fi
 
 echo "Instalando en $INSTALL_DIR..."
-mkdir -p "$INSTALL_DIR"
 cp "$JAR_FILE" "$INSTALL_DIR/rastrix.jar"
-chown -R "$SERVICE_USER":"$SERVICE_USER" "$INSTALL_DIR"
+# Ojo: chown solo del .jar, nunca "-R" sobre $INSTALL_DIR — ahí vive también
+# rastrix.env con permisos 640 (root:rastrix) que no queremos pisar.
+chown "$SERVICE_USER":"$SERVICE_USER" "$INSTALL_DIR/rastrix.jar"
+chmod 750 "$INSTALL_DIR/rastrix.jar"
 
 # ---------------------------------------------------------------------------
 # Servicio systemd

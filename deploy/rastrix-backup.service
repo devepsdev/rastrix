@@ -4,4 +4,4 @@ After=mysql.service
 
 [Service]
 Type=oneshot
-ExecStart=/opt/rastrix/backup-db.sh
+ExecStart=/opt/apps/rastrix/backup-db.sh
