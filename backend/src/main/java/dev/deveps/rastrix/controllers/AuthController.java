@@ -1,6 +1,7 @@
 package dev.deveps.rastrix.controllers;
 
 import dev.deveps.rastrix.dto.request.LoginRequest;
+import dev.deveps.rastrix.dto.request.RefreshTokenRequest;
 import dev.deveps.rastrix.dto.request.UserRequest;
 import dev.deveps.rastrix.dto.response.AuthResponse;
 import dev.deveps.rastrix.services.AuthService;
@@ -29,6 +30,17 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         return ResponseEntity.ok(authService.login(request, httpRequest.getRemoteAddr()));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refresh(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        authService.logout(request.refreshToken());
+        return ResponseEntity.noContent().build();
     }
 
 }

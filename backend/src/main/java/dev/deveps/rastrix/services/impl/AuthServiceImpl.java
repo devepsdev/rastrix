@@ -4,8 +4,10 @@ import dev.deveps.rastrix.dto.request.LoginRequest;
 import dev.deveps.rastrix.dto.request.UserRequest;
 import dev.deveps.rastrix.dto.response.AuthResponse;
 import dev.deveps.rastrix.dto.response.UserResponse;
+import dev.deveps.rastrix.entities.RefreshToken;
 import dev.deveps.rastrix.security.JwtService;
 import dev.deveps.rastrix.security.LoginRateLimiter;
+import dev.deveps.rastrix.security.RefreshTokenService;
 import dev.deveps.rastrix.services.AuthService;
 import dev.deveps.rastrix.services.UserService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +28,7 @@ public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final LoginRateLimiter loginRateLimiter;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     public AuthResponse register(UserRequest request) {
@@ -34,7 +37,6 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest request, String clientIp) {
         loginRateLimiter.checkAllowed(request.email(), clientIp);
         try {
@@ -49,11 +51,24 @@ public class AuthServiceImpl implements AuthService {
         return buildAuthResponse(user);
     }
 
+    @Override
+    public AuthResponse refresh(String refreshToken) {
+        RefreshToken consumed = refreshTokenService.consumeAndRotate(refreshToken);
+        UserResponse user = userService.findById(consumed.getUserId());
+        return buildAuthResponse(user);
+    }
+
+    @Override
+    public void logout(String refreshToken) {
+        refreshTokenService.revoke(refreshToken);
+    }
+
     private AuthResponse buildAuthResponse(UserResponse user) {
-        String token = jwtService.generateToken(
+        String accessToken = jwtService.generateToken(
                 user.email(),
                 Map.of("userId", user.id(), "uuid", user.uuid()));
-        return new AuthResponse(token, "Bearer", user.id(), user.uuid(), user.name(), user.email());
+        String refreshToken = refreshTokenService.createRefreshToken(user.id());
+        return new AuthResponse(accessToken, refreshToken, "Bearer", user.id(), user.uuid(), user.name(), user.email());
     }
 
 }

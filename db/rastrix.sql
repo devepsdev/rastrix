@@ -174,3 +174,21 @@ CREATE TABLE notificaciones (
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
     FOREIGN KEY (mercado_id) REFERENCES mercados(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+-- ---------------------------------------------------------------------
+-- Tabla: refresh_tokens
+-- Tokens de refresco para renovar el JWT de acceso sin volver a hacer login.
+-- Se guarda el hash SHA-256 del token, nunca el valor en claro.
+-- ---------------------------------------------------------------------
+CREATE TABLE refresh_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    uuid CHAR(36) NOT NULL UNIQUE,
+    usuario_id BIGINT NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    fecha_expiracion DATETIME NOT NULL,
+    revocado TINYINT(1) NOT NULL DEFAULT 0,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_refresh_usuario (usuario_id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+) ENGINE=InnoDB;

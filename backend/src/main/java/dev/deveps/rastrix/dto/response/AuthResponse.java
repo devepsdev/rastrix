@@ -2,7 +2,8 @@ package dev.deveps.rastrix.dto.response;
 
 public record AuthResponse(
 
-        String token,
+        String accessToken,
+        String refreshToken,
         String type,
         Long userId,
         String uuid,

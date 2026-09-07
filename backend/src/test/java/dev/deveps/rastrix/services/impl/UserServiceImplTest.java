@@ -8,6 +8,7 @@ import dev.deveps.rastrix.entities.User;
 import dev.deveps.rastrix.exception.DuplicateResourceException;
 import dev.deveps.rastrix.exception.InvalidDataException;
 import dev.deveps.rastrix.repositories.UserRepository;
+import dev.deveps.rastrix.security.RefreshTokenService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -33,6 +34,9 @@ class UserServiceImplTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private RefreshTokenService refreshTokenService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -90,6 +94,7 @@ class UserServiceImplTest {
 
         assertThat(user.getPassword()).isEqualTo("hashed-new");
         verify(userRepository).save(user);
+        verify(refreshTokenService).revokeAllForUser(1L);
     }
 
 }

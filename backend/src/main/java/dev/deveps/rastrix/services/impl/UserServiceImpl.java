@@ -11,6 +11,7 @@ import dev.deveps.rastrix.exception.DuplicateResourceException;
 import dev.deveps.rastrix.exception.InvalidDataException;
 import dev.deveps.rastrix.exception.ResourceNotFoundException;
 import dev.deveps.rastrix.repositories.UserRepository;
+import dev.deveps.rastrix.security.RefreshTokenService;
 import dev.deveps.rastrix.services.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     @Override
     public UserResponse create(UserRequest request) {
@@ -62,6 +64,9 @@ public class UserServiceImpl implements UserService {
         }
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+        // Si alguien más tenía sesión abierta (o un refresh token robado), que
+        // deje de servir en cuanto se cambia la contraseña.
+        refreshTokenService.revokeAllForUser(id);
     }
 
     @Override
