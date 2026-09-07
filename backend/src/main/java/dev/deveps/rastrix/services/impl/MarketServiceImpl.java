@@ -2,15 +2,16 @@ package dev.deveps.rastrix.services.impl;
 
 import dev.deveps.rastrix.dto.request.MarketRequest;
 import dev.deveps.rastrix.dto.response.MarketResponse;
+import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.entities.Market;
 import dev.deveps.rastrix.exception.ResourceNotFoundException;
 import dev.deveps.rastrix.repositories.MarketRepository;
 import dev.deveps.rastrix.services.MarketService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -93,26 +94,20 @@ public class MarketServiceImpl implements MarketService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<MarketResponse> findAll() {
-        return marketRepository.findAll().stream()
-                .map(this::toResponse)
-                .toList();
+    public PageResponse<MarketResponse> findAll(Pageable pageable) {
+        return toPageResponse(marketRepository.findAll(pageable));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<MarketResponse> findByCity(String city) {
-        return marketRepository.findByCity(city).stream()
-                .map(this::toResponse)
-                .toList();
+    public PageResponse<MarketResponse> findByCity(String city, Pageable pageable) {
+        return toPageResponse(marketRepository.findByCity(city, pageable));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<MarketResponse> findByProvince(String province) {
-        return marketRepository.findByProvince(province).stream()
-                .map(this::toResponse)
-                .toList();
+    public PageResponse<MarketResponse> findByProvince(String province, Pageable pageable) {
+        return toPageResponse(marketRepository.findByProvince(province, pageable));
     }
 
     private Market findEntityById(Long id) {
@@ -147,6 +142,10 @@ public class MarketServiceImpl implements MarketService {
                 market.getFechaCreacion(),
                 market.getFechaActualizacion()
         );
+    }
+
+    private PageResponse<MarketResponse> toPageResponse(Page<Market> page) {
+        return PageResponse.from(page.map(this::toResponse));
     }
 
 }

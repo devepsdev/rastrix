@@ -2,9 +2,11 @@ package dev.deveps.rastrix.controllers;
 
 import dev.deveps.rastrix.dto.request.ExhibitorRequest;
 import dev.deveps.rastrix.dto.response.ExhibitorResponse;
+import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.services.ExhibitorService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,8 +29,8 @@ public class ExhibitorController {
     private final ExhibitorService exhibitorService;
 
     @GetMapping
-    public List<ExhibitorResponse> findAll() {
-        return exhibitorService.findAll();
+    public PageResponse<ExhibitorResponse> findAll(Pageable pageable) {
+        return exhibitorService.findAll(pageable);
     }
 
     @GetMapping("/{id}")

@@ -3,6 +3,7 @@ package dev.deveps.rastrix.services.impl;
 import dev.deveps.rastrix.dto.request.ChangePasswordRequest;
 import dev.deveps.rastrix.dto.request.UpdateProfileRequest;
 import dev.deveps.rastrix.dto.request.UserRequest;
+import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.dto.response.UserResponse;
 import dev.deveps.rastrix.entities.Role;
 import dev.deveps.rastrix.entities.User;
@@ -12,11 +13,10 @@ import dev.deveps.rastrix.exception.ResourceNotFoundException;
 import dev.deveps.rastrix.repositories.UserRepository;
 import dev.deveps.rastrix.services.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -100,10 +100,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserResponse> findAll() {
-        return userRepository.findAll().stream()
-                .map(this::toResponse)
-                .toList();
+    public PageResponse<UserResponse> findAll(Pageable pageable) {
+        return PageResponse.from(userRepository.findAll(pageable).map(this::toResponse));
     }
 
     private User findEntityById(Long id) {

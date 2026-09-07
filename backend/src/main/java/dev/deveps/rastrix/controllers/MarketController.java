@@ -2,9 +2,11 @@ package dev.deveps.rastrix.controllers;
 
 import dev.deveps.rastrix.dto.request.MarketRequest;
 import dev.deveps.rastrix.dto.response.MarketResponse;
+import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.services.MarketService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,8 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/markets")
 @RequiredArgsConstructor
@@ -27,8 +27,8 @@ public class MarketController {
     private final MarketService marketService;
 
     @GetMapping
-    public List<MarketResponse> findAll() {
-        return marketService.findAll();
+    public PageResponse<MarketResponse> findAll(Pageable pageable) {
+        return marketService.findAll(pageable);
     }
 
     @GetMapping("/{id}")
@@ -42,13 +42,13 @@ public class MarketController {
     }
 
     @GetMapping("/city/{city}")
-    public List<MarketResponse> findByCity(@PathVariable String city) {
-        return marketService.findByCity(city);
+    public PageResponse<MarketResponse> findByCity(@PathVariable String city, Pageable pageable) {
+        return marketService.findByCity(city, pageable);
     }
 
     @GetMapping("/province/{province}")
-    public List<MarketResponse> findByProvince(@PathVariable String province) {
-        return marketService.findByProvince(province);
+    public PageResponse<MarketResponse> findByProvince(@PathVariable String province, Pageable pageable) {
+        return marketService.findByProvince(province, pageable);
     }
 
     @PostMapping

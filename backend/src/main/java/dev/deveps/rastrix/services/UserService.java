@@ -3,10 +3,10 @@ package dev.deveps.rastrix.services;
 import dev.deveps.rastrix.dto.request.ChangePasswordRequest;
 import dev.deveps.rastrix.dto.request.UpdateProfileRequest;
 import dev.deveps.rastrix.dto.request.UserRequest;
+import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.dto.response.UserResponse;
 import dev.deveps.rastrix.entities.Role;
-
-import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 public interface UserService {
 
@@ -26,6 +26,6 @@ public interface UserService {
 
     UserResponse findByEmail(String email);
 
-    List<UserResponse> findAll();
+    PageResponse<UserResponse> findAll(Pageable pageable);
 
 }

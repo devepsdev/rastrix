@@ -3,11 +3,13 @@ package dev.deveps.rastrix.controllers;
 import dev.deveps.rastrix.dto.request.ChangePasswordRequest;
 import dev.deveps.rastrix.dto.request.UpdateProfileRequest;
 import dev.deveps.rastrix.dto.request.UpdateRoleRequest;
+import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.dto.response.UserResponse;
 import dev.deveps.rastrix.security.UserPrincipal;
 import dev.deveps.rastrix.services.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,8 +20,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -56,8 +56,8 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<UserResponse> findAll() {
-        return userService.findAll();
+    public PageResponse<UserResponse> findAll(Pageable pageable) {
+        return userService.findAll(pageable);
     }
 
     @GetMapping("/{id}")

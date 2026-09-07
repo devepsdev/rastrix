@@ -2,8 +2,8 @@ package dev.deveps.rastrix.services;
 
 import dev.deveps.rastrix.dto.request.MarketRequest;
 import dev.deveps.rastrix.dto.response.MarketResponse;
-
-import java.util.List;
+import dev.deveps.rastrix.dto.response.PageResponse;
+import org.springframework.data.domain.Pageable;
 
 public interface MarketService {
 
@@ -17,10 +17,10 @@ public interface MarketService {
 
     MarketResponse findByUuid(String uuid);
 
-    List<MarketResponse> findAll();
+    PageResponse<MarketResponse> findAll(Pageable pageable);
 
-    List<MarketResponse> findByCity(String city);
+    PageResponse<MarketResponse> findByCity(String city, Pageable pageable);
 
-    List<MarketResponse> findByProvince(String province);
+    PageResponse<MarketResponse> findByProvince(String province, Pageable pageable);
 
 }
