@@ -294,7 +294,28 @@ else
     exit 1
 fi
 
+# ---------------------------------------------------------------------------
+# Backup automático de la base de datos
+# ---------------------------------------------------------------------------
+
+echo
+echo "Configurando el backup diario de la base de datos..."
+cp "$SCRIPT_DIR/backup-db.sh" "$INSTALL_DIR/backup-db.sh"
+chmod 700 "$INSTALL_DIR/backup-db.sh"
+chown root:root "$INSTALL_DIR/backup-db.sh"
+
+cp "$SCRIPT_DIR/rastrix-backup.service" /etc/systemd/system/rastrix-backup.service
+cp "$SCRIPT_DIR/rastrix-backup.timer" /etc/systemd/system/rastrix-backup.timer
+
+systemctl daemon-reload
+systemctl enable --now rastrix-backup.timer >/dev/null
+
+echo "Backup programado. Próxima ejecución:"
+systemctl list-timers rastrix-backup.timer --no-pager | head -n 2
+
 echo
 echo "Despliegue completado."
 echo "Credenciales guardadas en: $ENV_FILE (permisos 640, propietario root:$SERVICE_USER)"
-echo "Ver logs con: journalctl -u rastrix -f"
+echo "Ver logs de la app con: journalctl -u rastrix -f"
+echo "Backups en: /var/backups/rastrix (ver logs con: journalctl -u rastrix-backup)"
+echo "Lanzar un backup manual: sudo $INSTALL_DIR/backup-db.sh"
