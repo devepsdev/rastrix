@@ -9,13 +9,27 @@
 # y lo deja corriendo como servicio systemd (rastrix.service), que se
 # reinicia solo si el proceso muere o el servidor arranca.
 #
-# Uso: sudo ./deploy/deploy.sh   (ejecutar desde una copia del repositorio)
+# Uso:
+#   sudo ./deploy/deploy.sh             Despliegue completo/interactivo: pide
+#                                       (o confirma) todas las credenciales.
+#   sudo ./deploy/deploy.sh --redeploy  Redespliegue rápido: sin preguntas,
+#                                       reutiliza tal cual lo ya guardado en
+#                                       rastrix.env. Pensado para "he hecho
+#                                       git pull, quiero la versión nueva
+#                                       corriendo" — recompila, reinstala el
+#                                       .jar y reinicia el servicio. Falla con
+#                                       un mensaje claro si no hay un
+#                                       despliegue previo completo.
 #
-# Es seguro volver a ejecutarlo para redesplegar: reutiliza las credenciales
-# ya guardadas como valor por defecto (basta con pulsar Intro para
-# mantenerlas) y solo aplica el esquema de base de datos si no existe ya.
+# Ejecutar siempre desde una copia del repositorio (necesita ../backend y
+# ../db/rastrix.sql al lado).
 
 set -euo pipefail
+
+REDEPLOY=false
+if [[ "${1:-}" == "--redeploy" ]]; then
+    REDEPLOY=true
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -112,7 +126,12 @@ MAIL_PASSWORD="$(get_env_value MAIL_PASSWORD)"
 # ---------------------------------------------------------------------------
 
 echo "== Aplicación =="
-prompt SERVER_PORT "Puerto en el que escuchará Rastrix (detrás del proxy inverso)" "${SERVER_PORT:-8080}"
+if [[ "$REDEPLOY" == true ]]; then
+    [[ -n "$SERVER_PORT" ]] || { echo "No hay un despliegue previo completo (falta SERVER_PORT en $ENV_FILE). Ejecuta primero sin --redeploy." >&2; exit 1; }
+    echo "Modo redespliegue: se reutiliza el puerto ya configurado ($SERVER_PORT), sin preguntas."
+else
+    prompt SERVER_PORT "Puerto en el que escuchará Rastrix (detrás del proxy inverso)" "${SERVER_PORT:-8080}"
+fi
 
 # ---------------------------------------------------------------------------
 # Credenciales de la base de datos
@@ -120,23 +139,28 @@ prompt SERVER_PORT "Puerto en el que escuchará Rastrix (detrás del proxy inver
 
 echo
 echo "== Base de datos MySQL =="
-prompt DB_HOST "Host de MySQL" "${DB_HOST:-localhost}"
-prompt DB_PORT "Puerto de MySQL" "${DB_PORT:-3306}"
-prompt DB_USERNAME "Usuario de MySQL" "${DB_USERNAME:-root}"
+if [[ "$REDEPLOY" == true ]]; then
+    [[ -n "$DB_HOST" && -n "$DB_USERNAME" && -n "$DB_PASSWORD" ]] || { echo "Faltan datos de conexión a la base de datos en $ENV_FILE. Ejecuta primero sin --redeploy." >&2; exit 1; }
+    echo "Se reutilizan las credenciales de BBDD ya guardadas."
+else
+    prompt DB_HOST "Host de MySQL" "${DB_HOST:-localhost}"
+    prompt DB_PORT "Puerto de MySQL" "${DB_PORT:-3306}"
+    prompt DB_USERNAME "Usuario de MySQL" "${DB_USERNAME:-root}"
 
-while true; do
-    db_pw_message="Contraseña de MySQL para '$DB_USERNAME'"
-    [[ -n "$DB_PASSWORD" ]] && db_pw_message="$db_pw_message (deja en blanco para mantener la actual)"
-    prompt_secret DB_PASSWORD_INPUT "$db_pw_message"
-    if [[ -n "$DB_PASSWORD_INPUT" ]]; then
-        DB_PASSWORD="$DB_PASSWORD_INPUT"
-        break
-    elif [[ -n "$DB_PASSWORD" ]]; then
-        break
-    else
-        echo "La contraseña no puede estar vacía."
-    fi
-done
+    while true; do
+        db_pw_message="Contraseña de MySQL para '$DB_USERNAME'"
+        [[ -n "$DB_PASSWORD" ]] && db_pw_message="$db_pw_message (deja en blanco para mantener la actual)"
+        prompt_secret DB_PASSWORD_INPUT "$db_pw_message"
+        if [[ -n "$DB_PASSWORD_INPUT" ]]; then
+            DB_PASSWORD="$DB_PASSWORD_INPUT"
+            break
+        elif [[ -n "$DB_PASSWORD" ]]; then
+            break
+        else
+            echo "La contraseña no puede estar vacía."
+        fi
+    done
+fi
 
 echo "Comprobando conexión con MySQL..."
 if ! run_mysql -e "SELECT 1;" >/dev/null 2>&1; then
@@ -161,7 +185,10 @@ fi
 
 echo
 echo "== Firma de tokens JWT =="
-if [[ -n "$JWT_SECRET" ]]; then
+if [[ "$REDEPLOY" == true ]]; then
+    [[ -n "$JWT_SECRET" ]] || { echo "Falta JWT_SECRET en $ENV_FILE. Ejecuta primero sin --redeploy." >&2; exit 1; }
+    echo "Se mantiene el JWT_SECRET existente (un redespliegue nunca lo rota)."
+elif [[ -n "$JWT_SECRET" ]]; then
     read -rp "Ya hay un JWT_SECRET guardado. ¿Generar uno nuevo? Esto cerrará la sesión de todos los usuarios [s/N]: " ROTATE_JWT
     if [[ "$ROTATE_JWT" =~ ^[sS]$ ]]; then
         JWT_SECRET="$(openssl rand -base64 32)"
@@ -180,33 +207,38 @@ fi
 
 echo
 echo "== Usuario administrador =="
-prompt ADMIN_NAME "Nombre del administrador" "${ADMIN_NAME:-Administrador}"
+if [[ "$REDEPLOY" == true ]]; then
+    [[ -n "$ADMIN_EMAIL" && -n "$ADMIN_PASSWORD" ]] || { echo "Faltan credenciales de administrador en $ENV_FILE. Ejecuta primero sin --redeploy." >&2; exit 1; }
+    echo "Se reutilizan las credenciales de administrador ya guardadas."
+else
+    prompt ADMIN_NAME "Nombre del administrador" "${ADMIN_NAME:-Administrador}"
 
-while true; do
-    prompt ADMIN_EMAIL "Email del administrador" "${ADMIN_EMAIL:-}"
-    [[ -n "$ADMIN_EMAIL" ]] && break
-    echo "El email no puede estar vacío."
-done
+    while true; do
+        prompt ADMIN_EMAIL "Email del administrador" "${ADMIN_EMAIL:-}"
+        [[ -n "$ADMIN_EMAIL" ]] && break
+        echo "El email no puede estar vacío."
+    done
 
-while true; do
-    admin_pw_message="Contraseña del administrador"
-    [[ -n "$ADMIN_PASSWORD" ]] && admin_pw_message="$admin_pw_message (deja en blanco para mantener la actual)"
-    prompt_secret ADMIN_PASSWORD_INPUT "$admin_pw_message"
-    if [[ -z "$ADMIN_PASSWORD_INPUT" && -n "$ADMIN_PASSWORD" ]]; then
+    while true; do
+        admin_pw_message="Contraseña del administrador"
+        [[ -n "$ADMIN_PASSWORD" ]] && admin_pw_message="$admin_pw_message (deja en blanco para mantener la actual)"
+        prompt_secret ADMIN_PASSWORD_INPUT "$admin_pw_message"
+        if [[ -z "$ADMIN_PASSWORD_INPUT" && -n "$ADMIN_PASSWORD" ]]; then
+            break
+        fi
+        if [[ ${#ADMIN_PASSWORD_INPUT} -lt 8 ]]; then
+            echo "La contraseña debe tener al menos 8 caracteres."
+            continue
+        fi
+        prompt_secret ADMIN_PASSWORD_CONFIRM "Repite la contraseña"
+        if [[ "$ADMIN_PASSWORD_INPUT" != "$ADMIN_PASSWORD_CONFIRM" ]]; then
+            echo "Las contraseñas no coinciden, inténtalo de nuevo."
+            continue
+        fi
+        ADMIN_PASSWORD="$ADMIN_PASSWORD_INPUT"
         break
-    fi
-    if [[ ${#ADMIN_PASSWORD_INPUT} -lt 8 ]]; then
-        echo "La contraseña debe tener al menos 8 caracteres."
-        continue
-    fi
-    prompt_secret ADMIN_PASSWORD_CONFIRM "Repite la contraseña"
-    if [[ "$ADMIN_PASSWORD_INPUT" != "$ADMIN_PASSWORD_CONFIRM" ]]; then
-        echo "Las contraseñas no coinciden, inténtalo de nuevo."
-        continue
-    fi
-    ADMIN_PASSWORD="$ADMIN_PASSWORD_INPUT"
-    break
-done
+    done
+fi
 
 # ---------------------------------------------------------------------------
 # Correo (SMTP de Gmail, para el código de recuperación de contraseña)
@@ -214,21 +246,26 @@ done
 
 echo
 echo "== Correo (Gmail) =="
-prompt MAIL_USERNAME "Cuenta de Gmail remitente" "${MAIL_USERNAME:-devepsdev@gmail.com}"
+if [[ "$REDEPLOY" == true ]]; then
+    [[ -n "$MAIL_USERNAME" && -n "$MAIL_PASSWORD" ]] || { echo "Faltan credenciales de correo en $ENV_FILE. Ejecuta primero sin --redeploy." >&2; exit 1; }
+    echo "Se reutilizan las credenciales de correo ya guardadas."
+else
+    prompt MAIL_USERNAME "Cuenta de Gmail remitente" "${MAIL_USERNAME:-devepsdev@gmail.com}"
 
-while true; do
-    mail_pw_message="Contraseña de aplicación de Gmail para '$MAIL_USERNAME'"
-    [[ -n "$MAIL_PASSWORD" ]] && mail_pw_message="$mail_pw_message (deja en blanco para mantener la actual)"
-    prompt_secret MAIL_PASSWORD_INPUT "$mail_pw_message"
-    if [[ -n "$MAIL_PASSWORD_INPUT" ]]; then
-        MAIL_PASSWORD="$MAIL_PASSWORD_INPUT"
-        break
-    elif [[ -n "$MAIL_PASSWORD" ]]; then
-        break
-    else
-        echo "La contraseña no puede estar vacía (genera una en https://myaccount.google.com/apppasswords)."
-    fi
-done
+    while true; do
+        mail_pw_message="Contraseña de aplicación de Gmail para '$MAIL_USERNAME'"
+        [[ -n "$MAIL_PASSWORD" ]] && mail_pw_message="$mail_pw_message (deja en blanco para mantener la actual)"
+        prompt_secret MAIL_PASSWORD_INPUT "$mail_pw_message"
+        if [[ -n "$MAIL_PASSWORD_INPUT" ]]; then
+            MAIL_PASSWORD="$MAIL_PASSWORD_INPUT"
+            break
+        elif [[ -n "$MAIL_PASSWORD" ]]; then
+            break
+        else
+            echo "La contraseña no puede estar vacía (genera una en https://myaccount.google.com/apppasswords)."
+        fi
+    done
+fi
 
 # ---------------------------------------------------------------------------
 # Guardar credenciales
@@ -328,28 +365,12 @@ else
     exit 1
 fi
 
-# ---------------------------------------------------------------------------
-# Backup automático de la base de datos
-# ---------------------------------------------------------------------------
-
 echo
-echo "Configurando el backup diario de la base de datos..."
-cp "$SCRIPT_DIR/backup-db.sh" "$INSTALL_DIR/backup-db.sh"
-chmod 700 "$INSTALL_DIR/backup-db.sh"
-chown root:root "$INSTALL_DIR/backup-db.sh"
-
-cp "$SCRIPT_DIR/rastrix-backup.service" /etc/systemd/system/rastrix-backup.service
-cp "$SCRIPT_DIR/rastrix-backup.timer" /etc/systemd/system/rastrix-backup.timer
-
-systemctl daemon-reload
-systemctl enable --now rastrix-backup.timer >/dev/null
-
-echo "Backup programado. Próxima ejecución:"
-systemctl list-timers rastrix-backup.timer --no-pager | head -n 2
-
-echo
-echo "Despliegue completado."
+if [[ "$REDEPLOY" == true ]]; then
+    echo "Redespliegue completado."
+else
+    echo "Despliegue completado."
+fi
 echo "Credenciales guardadas en: $ENV_FILE (permisos 640, propietario root:$SERVICE_USER)"
 echo "Ver logs de la app con: journalctl -u rastrix -f"
-echo "Backups en: /var/backups/rastrix (ver logs con: journalctl -u rastrix-backup)"
-echo "Lanzar un backup manual: sudo $INSTALL_DIR/backup-db.sh"
+echo "El backup de la base de datos se gestiona de forma centralizada para todos los proyectos del servidor, fuera de este script."
