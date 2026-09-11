@@ -1,6 +1,7 @@
 package dev.deveps.rastrix.controllers;
 
 import dev.deveps.rastrix.dto.request.MarketRequest;
+import dev.deveps.rastrix.dto.response.MarketImportResponse;
 import dev.deveps.rastrix.dto.response.MarketResponse;
 import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.services.MarketService;
@@ -55,6 +56,20 @@ public class MarketController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<MarketResponse> create(@Valid @RequestBody MarketRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(marketService.create(request));
+    }
+
+    /**
+     * Alta o actualización idempotente por nombre + ciudad, para el importador
+     * automático: repetir la misma importación no duplica el catálogo.
+     * Devuelve 201 si ha dado de alta el mercado y 200 si ya existía.
+     */
+    @PutMapping("/import")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MarketImportResponse> importMarket(@Valid @RequestBody MarketRequest request) {
+        MarketImportResponse result = marketService.upsert(request);
+        return ResponseEntity
+                .status(result.created() ? HttpStatus.CREATED : HttpStatus.OK)
+                .body(result);
     }
 
     @PutMapping("/{id}")

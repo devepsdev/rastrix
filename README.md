@@ -115,6 +115,27 @@ IP real del cliente detrás de Nginx.
 - **Rate limiting**: máx. 5 intentos de login fallidos por email y 20 por IP cada
   15 min → `429` con cabecera `Retry-After`.
 
+### Importación de mercados
+
+Un mercado queda identificado por **nombre + ciudad**, con un `UNIQUE` en la
+base de datos. Crear uno repetido con `POST /api/markets` devuelve `409`.
+
+Para cargas automáticas repetidas existe `PUT /api/markets/import` (solo
+`ADMIN`), que es idempotente: da de alta el mercado si no existe (`201`,
+`created: true`) o actualiza el que ya había (`200`, `created: false`). Repetir
+la misma importación no duplica nada.
+
+Al actualizar, **no toca el estado de publicación**: si un administrador ha
+ocultado un mercado (`active: false`), una importación posterior no vuelve a
+publicarlo. El campo `active` solo se aplica en el alta, así que un importador
+puede crear los mercados sin publicar y dejar que se revisen antes.
+
+La comparación ignora mayúsculas y espacios sobrantes, pero **no los acentos**:
+"Antigüitats" y "Antiguitats" se consideran mercados distintos.
+
+Para operar contra este endpoint hace falta una cuenta `ADMIN`; se crea al
+arrancar informando `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
+
 ### Roles y permisos
 
 Dos roles: `USER` (por defecto al registrarse) y `ADMIN`.

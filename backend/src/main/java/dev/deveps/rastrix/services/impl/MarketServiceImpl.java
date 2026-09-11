@@ -1,9 +1,11 @@
 package dev.deveps.rastrix.services.impl;
 
 import dev.deveps.rastrix.dto.request.MarketRequest;
+import dev.deveps.rastrix.dto.response.MarketImportResponse;
 import dev.deveps.rastrix.dto.response.MarketResponse;
 import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.entities.Market;
+import dev.deveps.rastrix.exception.DuplicateResourceException;
 import dev.deveps.rastrix.exception.ResourceNotFoundException;
 import dev.deveps.rastrix.repositories.MarketRepository;
 import dev.deveps.rastrix.services.MarketService;
@@ -22,55 +24,36 @@ public class MarketServiceImpl implements MarketService {
 
     @Override
     public MarketResponse create(MarketRequest request) {
-        Market market = Market.builder()
-                .name(request.name())
-                .description(request.description())
-                .address(request.address())
-                .city(request.city())
-                .province(request.province())
-                .postalCode(request.postalCode())
-                .latitude(request.latitude())
-                .longitude(request.longitude())
-                .frequency(request.frequency())
-                .dayOfWeek(request.dayOfWeek())
-                .startDate(request.startDate())
-                .endDate(request.endDate())
-                .startTime(request.startTime())
-                .endTime(request.endTime())
-                .mainImage(request.mainImage())
-                .organizer(request.organizer())
-                .contactPhone(request.contactPhone())
-                .contactEmail(request.contactEmail())
-                .website(request.website())
-                .active(request.active())
-                .build();
+        requireNoDuplicate(request, null);
+        Market market = new Market();
+        applyRequest(market, request, true);
         return toResponse(marketRepository.save(market));
     }
 
     @Override
     public MarketResponse update(Long id, MarketRequest request) {
         Market market = findEntityById(id);
-        market.setName(request.name());
-        market.setDescription(request.description());
-        market.setAddress(request.address());
-        market.setCity(request.city());
-        market.setProvince(request.province());
-        market.setPostalCode(request.postalCode());
-        market.setLatitude(request.latitude());
-        market.setLongitude(request.longitude());
-        market.setFrequency(request.frequency());
-        market.setDayOfWeek(request.dayOfWeek());
-        market.setStartDate(request.startDate());
-        market.setEndDate(request.endDate());
-        market.setStartTime(request.startTime());
-        market.setEndTime(request.endTime());
-        market.setMainImage(request.mainImage());
-        market.setOrganizer(request.organizer());
-        market.setContactPhone(request.contactPhone());
-        market.setContactEmail(request.contactEmail());
-        market.setWebsite(request.website());
-        market.setActive(request.active());
+        requireNoDuplicate(request, id);
+        applyRequest(market, request, true);
         return toResponse(marketRepository.save(market));
+    }
+
+    @Override
+    public MarketImportResponse upsert(MarketRequest request) {
+        Market existing = marketRepository
+                .findByNameAndCity(normalize(request.name()), normalize(request.city()))
+                .orElse(null);
+
+        if (existing == null) {
+            Market market = new Market();
+            applyRequest(market, request, true);
+            return new MarketImportResponse(toResponse(marketRepository.save(market)), true);
+        }
+
+        // El estado de publicación no se toca: si alguien ocultó el mercado a
+        // mano, una importación posterior no debe devolverlo a la app.
+        applyRequest(existing, request, false);
+        return new MarketImportResponse(toResponse(marketRepository.save(existing)), false);
     }
 
     @Override
@@ -113,6 +96,61 @@ public class MarketServiceImpl implements MarketService {
     private Market findEntityById(Long id) {
         return marketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe ningún mercado con id: " + id));
+    }
+
+    /**
+     * Vuelca la petición sobre la entidad. {@code applyActive} permite dejar
+     * fuera el estado de publicación en las importaciones.
+     */
+    private void applyRequest(Market market, MarketRequest request, boolean applyActive) {
+        market.setName(normalize(request.name()));
+        market.setDescription(request.description());
+        market.setAddress(request.address());
+        market.setCity(normalize(request.city()));
+        market.setProvince(normalize(request.province()));
+        market.setPostalCode(request.postalCode());
+        market.setLatitude(request.latitude());
+        market.setLongitude(request.longitude());
+        market.setFrequency(request.frequency());
+        market.setDayOfWeek(request.dayOfWeek());
+        market.setStartDate(request.startDate());
+        market.setEndDate(request.endDate());
+        market.setStartTime(request.startTime());
+        market.setEndTime(request.endTime());
+        market.setMainImage(request.mainImage());
+        market.setOrganizer(request.organizer());
+        market.setContactPhone(request.contactPhone());
+        market.setContactEmail(request.contactEmail());
+        market.setWebsite(request.website());
+        if (applyActive) {
+            market.setActive(request.active());
+        }
+    }
+
+    private void requireNoDuplicate(MarketRequest request, Long idToExclude) {
+        String name = normalize(request.name());
+        String city = normalize(request.city());
+
+        marketRepository.findByNameAndCity(name, city).ifPresent(existing -> {
+            if (!existing.getId().equals(idToExclude)) {
+                throw new DuplicateResourceException(
+                        "Ya existe un mercado llamado \"" + name + "\""
+                                + (city != null ? " en " + city : "")
+                                + ". Edítalo en lugar de crear otro.");
+            }
+        });
+    }
+
+    /**
+     * Recorta y colapsa espacios: "El  Rastro " y "El Rastro" son el mismo
+     * mercado y deben chocar entre sí al comprobar duplicados.
+     */
+    private static String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+        String collapsed = value.trim().replaceAll("\\s+", " ");
+        return collapsed.isEmpty() ? null : collapsed;
     }
 
     private MarketResponse toResponse(Market market) {

@@ -71,6 +71,10 @@ CREATE TABLE mercados (
     activo TINYINT(1) DEFAULT 1,
     fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
     fecha_actualizacion DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- Un mercado queda identificado por su nombre y su ciudad: evita que el
+    -- importador automático cree un duplicado en cada pasada. La colación
+    -- utf8mb4_unicode_ci hace la comparación insensible a mayúsculas.
+    UNIQUE KEY unico_mercado_ciudad (nombre, ciudad),
     INDEX idx_ciudad (ciudad),
     INDEX idx_provincia (provincia),
     INDEX idx_fechas (fecha_inicio, fecha_fin)
