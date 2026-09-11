@@ -49,7 +49,16 @@ deploy/    Script de despliegue y configuración de Nginx para el servidor
    mysql -u root < db/rastrix.sql
    ```
 
-   El script crea la base `rastrix`, sus 11 tablas y unas categorías de ejemplo.
+   El script crea la base `rastrix` y sus 11 tablas, sin datos.
+
+   Opcionalmente, para tener un catálogo con el que trabajar en local:
+
+   ```bash
+   mysql -u root rastrix < db/seed-demo.sql
+   ```
+
+   Carga 12 mercados de ejemplo con categorías, fotos y expositores. Es solo
+   para desarrollo: reescribe el catálogo entero cada vez que se ejecuta.
 
 2. Arranca la aplicación:
 
@@ -157,4 +166,37 @@ fuera de este repositorio.
 ## Frontend
 
 App Android con Expo (SDK 57) / React Native 0.86 / expo-router, en `frontend/`.
-En desarrollo: la base del proyecto está montada pero aún no consume la API.
+
+```bash
+cd frontend
+npm install
+npx expo start
+```
+
+Por defecto apunta al backend de producción. Para desarrollar contra el backend
+local, crea un `frontend/.env.local` (ignorado por git) con la IP de tu equipo
+en la red wifi, para que el móvil pueda alcanzarlo:
+
+```
+EXPO_PUBLIC_API_URL=http://192.168.1.50:8080
+```
+
+### Estructura
+
+```
+src/api/         Un módulo por recurso de la API + cliente HTTP (client.ts)
+src/auth/        Sesión: almacén de tokens, contexto de React y persistencia segura
+src/types/       Tipos espejo de los DTOs del backend
+src/theme/       Paleta, tipografía y escalas de espaciado
+src/components/  Componentes de interfaz (ui/ para los genéricos)
+src/app/         Pantallas y navegación (expo-router)
+```
+
+### Diseño
+
+Identidad "editorial vintage": fondo papel, tipografía Fraunces para titulares
+e Inter para texto, acentos terracota y verde inglés. Soporta modo claro y
+oscuro siguiendo el ajuste del sistema.
+
+Pantallas: Descubrir, Buscar, Favoritos y Perfil (pestañas), más detalle de
+mercado, acceso (login/registro) y notificaciones.

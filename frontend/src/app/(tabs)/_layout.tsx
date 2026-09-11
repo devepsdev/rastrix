@@ -1,0 +1,48 @@
+import { useTheme } from "@/theme";
+import Feather from "@expo/vector-icons/Feather";
+import { Tabs } from "expo-router";
+
+type FeatherName = React.ComponentProps<typeof Feather>["name"];
+
+const TABS: { name: string; title: string; icon: FeatherName }[] = [
+  { name: "index", title: "Descubrir", icon: "compass" },
+  { name: "buscar", title: "Buscar", icon: "search" },
+  { name: "favoritos", title: "Favoritos", icon: "bookmark" },
+  { name: "perfil", title: "Perfil", icon: "user" },
+];
+
+export default function TabsLayout() {
+  const theme = useTheme();
+
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: theme.colors.accent,
+        tabBarInactiveTintColor: theme.colors.inkFaint,
+        tabBarStyle: {
+          backgroundColor: theme.colors.surface,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.border,
+          elevation: 0,
+        },
+        tabBarLabelStyle: {
+          fontFamily: theme.fontFamily.sansSemibold,
+          fontSize: 10.5,
+          letterSpacing: 0.3,
+        },
+      }}
+    >
+      {TABS.map(({ name, title, icon }) => (
+        <Tabs.Screen
+          key={name}
+          name={name}
+          options={{
+            title,
+            tabBarIcon: ({ color }) => <Feather name={icon} size={20} color={color} />,
+          }}
+        />
+      ))}
+    </Tabs>
+  );
+}
