@@ -18,7 +18,7 @@ mercado, favoritos, valoraciones y notificaciones.
 ```
 backend/   API REST (Spring Boot 4, Java 25)
 frontend/  App Android (Expo / React Native) — en desarrollo
-db/        rastrix.sql — esquema completo de la base de datos (MySQL/MariaDB)
+db/        seed-demo.sql — catálogo de ejemplo para desarrollo local
 deploy/    Script de despliegue y configuración de Nginx para el servidor
 ```
 
@@ -43,13 +43,11 @@ deploy/    Script de despliegue y configuración de Nginx para el servidor
 
 ### Puesta en marcha (local)
 
-1. Crea la base de datos y aplica el esquema:
+1. Crea la base de datos vacía (las tablas las crea Flyway al arrancar):
 
    ```bash
-   mysql -u root < db/rastrix.sql
+   mysql -u root -e "CREATE DATABASE IF NOT EXISTS rastrix CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
    ```
-
-   El script crea la base `rastrix` y sus 11 tablas, sin datos.
 
    Opcionalmente, para tener un catálogo con el que trabajar en local:
 
@@ -74,9 +72,20 @@ deploy/    Script de despliegue y configuración de Nginx para el servidor
 3. La API queda en `http://localhost:8080`. Documentación interactiva en
    `http://localhost:8080/swagger-ui/index.html`.
 
-> `spring.jpa.hibernate.ddl-auto=validate`: Hibernate **no crea ni modifica** el
-> esquema, solo comprueba que coincide con las entidades. Si cambias una
-> entidad, actualiza también `db/rastrix.sql` y la base.
+### Esquema de la base de datos
+
+Lo gestiona **Flyway**, con las migraciones de
+`backend/src/main/resources/db/migration`, que se aplican solas al arrancar la
+aplicación. Hibernate va con `ddl-auto=validate`: no crea ni modifica nada,
+solo comprueba que el esquema coincide con las entidades.
+
+Para cambiar el esquema, añade un fichero nuevo `V<n>__descripcion.sql`. Nunca
+edites una migración ya aplicada: Flyway guarda una suma de comprobación de
+cada una y se negará a arrancar si cambia.
+
+Las bases creadas antes de adoptar Flyway (como la de producción) se marcan
+automáticamente en la versión 1 y solo reciben las migraciones posteriores, así
+que no hay que hacer nada especial al actualizarlas.
 
 ### Configuración
 

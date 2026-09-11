@@ -21,8 +21,7 @@
 #                                       un mensaje claro si no hay un
 #                                       despliegue previo completo.
 #
-# Ejecutar siempre desde una copia del repositorio (necesita ../backend y
-# ../db/rastrix.sql al lado).
+# Ejecutar siempre desde una copia del repositorio (necesita ../backend al lado).
 
 set -euo pipefail
 
@@ -34,7 +33,6 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BACKEND_DIR="$REPO_ROOT/backend"
-SCHEMA_FILE="$REPO_ROOT/db/rastrix.sql"
 
 INSTALL_DIR="/opt/apps/rastrix"
 ENV_FILE="$INSTALL_DIR/rastrix.env"
@@ -169,15 +167,12 @@ if ! run_mysql -e "SELECT 1;" >/dev/null 2>&1; then
 fi
 echo "Conexión correcta."
 
-SCHEMA_PRESENT="$(run_mysql -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${DB_NAME}' AND table_name='usuarios';")"
-
-if [[ "$SCHEMA_PRESENT" -eq 0 ]]; then
-    echo "La base de datos '$DB_NAME' no tiene el esquema de Rastrix todavía. Aplicando $SCHEMA_FILE..."
-    run_mysql < "$SCHEMA_FILE"
-    echo "Esquema aplicado."
-else
-    echo "El esquema ya existe en '$DB_NAME'; no se modifica."
-fi
+# El esquema lo gestiona Flyway al arrancar la aplicación, con las migraciones
+# de backend/src/main/resources/db/migration. Aquí solo hay que garantizar que
+# la base de datos exista, porque Flyway se conecta a una ya creada.
+echo "Asegurando que existe la base de datos '$DB_NAME'..."
+run_mysql -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+echo "Base de datos lista. Las tablas y sus cambios los aplica Flyway al arrancar."
 
 # ---------------------------------------------------------------------------
 # JWT secret
