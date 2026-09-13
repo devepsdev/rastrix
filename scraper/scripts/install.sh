@@ -1,30 +1,46 @@
 #!/usr/bin/env bash
-# Instala o actualiza el scraper en la Orange Pi.
+# Instala o actualiza el scraper en la Orange Pi, sin necesitar sudo.
 #
 #   bash scraper/scripts/install.sh
 #
 # Deja el código en /opt/apps/rastrix-src (clon del repositorio) y los datos en
-# /opt/apps/rastrix-scraper: entorno virtual, .env (600), estado y logs.
+# /opt/apps/rastrix-scraper: entorno virtual, .env (600), estado y logs. La
+# pasada semanal se programa en el crontab del usuario que lo ejecuta.
+#
+# /opt/apps pertenece a root: la primera vez hay que crear las dos carpetas con
+#   sudo install -d -o "$USER" -g "$USER" /opt/apps/rastrix-src /opt/apps/rastrix-scraper
 set -euo pipefail
 
 REPO_URL="https://github.com/devepsdev/rastrix.git"
 SRC_DIR="/opt/apps/rastrix-src"
 HOME_DIR="/opt/apps/rastrix-scraper"
-CRON_FILE="/etc/cron.d/rastrix-scraper"
 RUN_USER="$(id -un)"
+CRON_TAG="# rastrix-scraper"
+# Lunes a las 06:00: recoge lo publicado para el fin de semana siguiente y deja
+# la semana entera para revisar la bandeja.
+CRON_LINE="0 6 * * 1 $SRC_DIR/scraper/scripts/run_weekly.sh $CRON_TAG"
 
-if [[ ! -d "$SRC_DIR/.git" ]]; then
-    echo "Clonando el repositorio en $SRC_DIR..."
-    sudo mkdir -p "$SRC_DIR"
-    sudo chown "$RUN_USER":"$RUN_USER" "$SRC_DIR"
-    git clone --quiet "$REPO_URL" "$SRC_DIR"
-else
+for dir in "$SRC_DIR" "$HOME_DIR"; do
+    if [[ ! -d "$dir" ]] && ! mkdir -p "$dir" 2>/dev/null; then
+        echo "No se puede crear $dir. Créalo una vez con:" >&2
+        echo "  sudo install -d -o $RUN_USER -g $RUN_USER $SRC_DIR $HOME_DIR" >&2
+        exit 1
+    fi
+    if [[ ! -w "$dir" ]]; then
+        echo "$dir existe pero $RUN_USER no puede escribir en él. Arréglalo con:" >&2
+        echo "  sudo chown $RUN_USER:$RUN_USER $dir" >&2
+        exit 1
+    fi
+done
+
+if [[ -d "$SRC_DIR/.git" ]]; then
     echo "Actualizando el repositorio en $SRC_DIR..."
     git -C "$SRC_DIR" pull --ff-only --quiet
+else
+    echo "Clonando el repositorio en $SRC_DIR..."
+    git clone --quiet "$REPO_URL" "$SRC_DIR"
 fi
 
-sudo mkdir -p "$HOME_DIR"
-sudo chown "$RUN_USER":"$RUN_USER" "$HOME_DIR"
 mkdir -p "$HOME_DIR/data" "$HOME_DIR/logs"
 
 if [[ ! -d "$HOME_DIR/venv" ]]; then
@@ -41,8 +57,9 @@ fi
 # Contiene la contraseña del bot y la clave de DeepSeek: solo para su dueño.
 chmod 600 "$HOME_DIR/.env"
 
-sed "s/__RUN_USER__/$RUN_USER/" "$SRC_DIR/scraper/deploy/rastrix-scraper.cron" | sudo tee "$CRON_FILE" > /dev/null
-sudo chmod 644 "$CRON_FILE"
+# Se sustituye la línea anterior en vez de añadir otra en cada instalación.
+{ crontab -l 2>/dev/null | grep -v "$CRON_TAG" || true; echo "$CRON_LINE"; } | crontab -
+echo "Pasada semanal programada en el crontab de $RUN_USER (lunes 06:00)."
 
 echo "Scraper instalado. Prueba sin enviar nada con:"
 echo "  cd $SRC_DIR/scraper && SCRAPER_HOME=$HOME_DIR $HOME_DIR/venv/bin/python main.py --dry-run"

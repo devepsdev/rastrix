@@ -25,21 +25,29 @@ otro rol sus sugerencias no se marcarían como automáticas ni se deduplicarían
 
 ## Instalación en la Orange Pi
 
+La primera vez, crea las dos carpetas (`/opt/apps` es de root):
+
 ```bash
-git clone https://github.com/devepsdev/rastrix.git /tmp/rastrix
-bash /tmp/rastrix/scraper/scripts/install.sh
+sudo install -d -o "$USER" -g "$USER" /opt/apps/rastrix-src /opt/apps/rastrix-scraper
 ```
 
-Después rellena `/opt/apps/rastrix-scraper/.env` y prueba sin enviar nada:
+Y después, sin sudo:
+
+```bash
+git clone https://github.com/devepsdev/rastrix.git /opt/apps/rastrix-src
+bash /opt/apps/rastrix-src/scraper/scripts/install.sh
+```
+
+Rellena `/opt/apps/rastrix-scraper/.env` y prueba sin enviar nada:
 
 ```bash
 cd /opt/apps/rastrix-src/scraper
 SCRAPER_HOME=/opt/apps/rastrix-scraper /opt/apps/rastrix-scraper/venv/bin/python main.py --dry-run
 ```
 
-La pasada automática la lanza cron los lunes a las 06:00
-(`/etc/cron.d/rastrix-scraper`), con logs en `/opt/apps/rastrix-scraper/logs/`.
-Para actualizar el código o las fuentes, vuelve a ejecutar `install.sh`.
+La pasada automática queda en el crontab del usuario (lunes a las 06:00), con
+logs en `/opt/apps/rastrix-scraper/logs/`. Para actualizar código o fuentes,
+vuelve a ejecutar `install.sh`.
 
 ## Desarrollo
 
