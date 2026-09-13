@@ -27,7 +27,7 @@ FIELDS = [
     ("RASTRIX_EMAIL", "Email de la cuenta del bot", "scraper@deveps.dev", False),
     ("RASTRIX_PASSWORD", "Contraseña de la cuenta del bot", "", True),
     ("DEEPSEEK_API_KEY", "Clave de la API de DeepSeek", "", True),
-    ("DEEPSEEK_MODEL", "Modelo de DeepSeek", "deepseek-chat", False),
+    ("DEEPSEEK_MODEL", "Modelo de DeepSeek", "deepseek-flash", False),
     ("REQUEST_DELAY_SECONDS", "Segundos de espera entre páginas", "3", False),
 ]
 REQUIRED = {"RASTRIX_EMAIL", "RASTRIX_PASSWORD", "DEEPSEEK_API_KEY"}

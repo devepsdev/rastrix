@@ -18,7 +18,7 @@ RASTRIX_EMAIL = os.getenv("RASTRIX_EMAIL", "")
 RASTRIX_PASSWORD = os.getenv("RASTRIX_PASSWORD", "")
 
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-flash")
 
 SOURCES_FILE = Path(os.getenv("SOURCES_FILE", str(BASE_DIR / "sources.yaml")))
 STATE_DB = HOME / "data" / "state.db"
