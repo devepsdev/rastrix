@@ -116,7 +116,9 @@ export default function SearchScreen() {
           <EmptyState
             icon="search"
             title="Sin resultados"
-            message="Prueba con otro término o quita el filtro de categoría."
+            message="Prueba con otro término. Y si conoces un mercado que no está, cuéntanoslo."
+            actionLabel="Sugerir un mercado"
+            onAction={() => router.push("/sugerir")}
           />
         ) : (
           <>

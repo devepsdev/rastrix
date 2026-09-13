@@ -1,0 +1,61 @@
+<p class="eyebrow text-accent">Comunidad</p>
+<h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Usuarios</h1>
+
+<div class="card mt-8 overflow-hidden">
+  @if (loading() && !result()) {
+    <div class="h-48 animate-pulse bg-sunken"></div>
+  } @else if (result(); as page) {
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="border-b border-line bg-paper/60">
+            <th class="eyebrow px-5 py-3 text-ink-faint">Usuario</th>
+            <th class="eyebrow px-5 py-3 text-ink-faint">Rol</th>
+            <th class="eyebrow hidden px-5 py-3 text-ink-faint md:table-cell">Alta</th>
+            <th class="px-5 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (user of page.content; track user.id) {
+            <tr class="border-b border-line last:border-0">
+              <td class="px-5 py-3">
+                <div class="flex items-center gap-3">
+                  <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft font-serif font-bold text-accent">
+                    {{ user.name.charAt(0).toUpperCase() }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="truncate font-semibold">
+                      {{ user.name }}
+                      @if (user.id === auth.user()?.id) { <span class="font-normal text-ink-faint">(tú)</span> }
+                    </p>
+                    <p class="truncate text-xs text-ink-muted">{{ user.email }}</p>
+                  </div>
+                </div>
+              </td>
+              <td class="px-5 py-3">
+                @if (user.role === 'ADMIN') {
+                  <span class="badge bg-accent-soft text-accent">Admin</span>
+                } @else {
+                  <span class="badge bg-sunken text-ink-muted">Usuario</span>
+                }
+              </td>
+              <td class="hidden px-5 py-3 text-ink-muted md:table-cell">{{ user.fechaCreacion | date: 'd MMM y' }}</td>
+              <td class="px-5 py-3">
+                <!-- Nadie puede quitarse a sí mismo los permisos ni borrar su propia cuenta desde aquí. -->
+                @if (user.id !== auth.user()?.id) {
+                  <div class="flex justify-end gap-2">
+                    <button type="button" class="btn btn-secondary btn-sm" [disabled]="busyId() === user.id" (click)="toggleRole(user)">
+                      {{ user.role === 'ADMIN' ? 'Quitar admin' : 'Hacer admin' }}
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" [disabled]="busyId() === user.id" (click)="remove(user)">Eliminar</button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-pagination [page]="page.pageNumber" [totalPages]="page.totalPages" [totalElements]="page.totalElements" (pageChange)="goToPage($event)" />
+  }
+</div>

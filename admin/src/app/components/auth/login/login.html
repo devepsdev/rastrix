@@ -1,0 +1,44 @@
+<div class="flex min-h-screen items-center justify-center px-5">
+  <div class="w-full max-w-sm">
+    <div class="mb-8 text-center">
+      <p class="font-serif text-5xl font-bold tracking-tight">Rastrix</p>
+      <p class="eyebrow mt-3 text-ink-faint">Panel de administración</p>
+    </div>
+
+    <form class="card p-7 shadow-sm" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (caducada()) {
+        <p class="mb-5 rounded-lg bg-accent-soft px-3 py-2 text-sm text-accent">Tu sesión ha caducado. Vuelve a entrar.</p>
+      }
+
+      <label class="label" for="email">Correo electrónico</label>
+      <input
+        id="email"
+        class="input"
+        type="email"
+        autocomplete="username"
+        formControlName="email"
+        [class.input-error]="form.controls.email.touched && form.controls.email.invalid"
+      />
+
+      <label class="label mt-5" for="password">Contraseña</label>
+      <input
+        id="password"
+        class="input"
+        type="password"
+        autocomplete="current-password"
+        formControlName="password"
+        [class.input-error]="form.controls.password.touched && form.controls.password.invalid"
+      />
+
+      @if (error()) {
+        <p class="mt-4 text-sm text-danger">{{ error() }}</p>
+      }
+
+      <button type="submit" class="btn btn-primary mt-6 w-full" [disabled]="submitting()">
+        {{ submitting() ? 'Entrando…' : 'Entrar' }}
+      </button>
+    </form>
+
+    <p class="mt-6 text-center text-xs text-ink-faint">Acceso restringido a cuentas con perfil de administrador.</p>
+  </div>
+</div>

@@ -1,0 +1,59 @@
+<p class="eyebrow text-accent">Catálogo</p>
+<h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Categorías</h1>
+<p class="mt-2 text-sm text-ink-muted">Tipos de artículos que se encuentran en los mercados. Se muestran como filtro en la app.</p>
+
+<div class="mt-8 grid items-start gap-6 lg:grid-cols-3">
+  <div class="card overflow-hidden lg:col-span-2">
+    @if (loading()) {
+      <div class="h-48 animate-pulse bg-sunken"></div>
+    } @else if (items().length === 0) {
+      <div class="px-5 py-16 text-center">
+        <p class="font-serif text-xl font-semibold">Todavía no hay categorías</p>
+        <p class="mt-1 text-sm text-ink-muted">Crea la primera con el formulario.</p>
+      </div>
+    } @else {
+      <ul>
+        @for (category of items(); track category.id) {
+          <li class="flex items-center gap-4 border-b border-line px-5 py-4 last:border-0" [class.bg-accent-soft]="editing()?.id === category.id">
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold">{{ category.name }}</p>
+              @if (category.description) {
+                <p class="truncate text-sm text-ink-muted">{{ category.description }}</p>
+              }
+            </div>
+            @if (category.icon) {
+              <span class="hidden rounded-md bg-sunken px-2 py-0.5 font-mono text-xs text-ink-muted sm:inline">{{ category.icon }}</span>
+            }
+            <button type="button" class="btn btn-ghost btn-sm" (click)="edit(category)">Editar</button>
+            <button type="button" class="btn btn-danger btn-sm" (click)="remove(category)">Eliminar</button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <form class="card p-6" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <h2 class="font-serif text-xl font-semibold">{{ editing() ? 'Editar categoría' : 'Nueva categoría' }}</h2>
+
+    <label class="label mt-5" for="cat-name">Nombre *</label>
+    <input id="cat-name" class="input" formControlName="name" [class.input-error]="form.controls.name.touched && form.controls.name.invalid" />
+
+    <label class="label mt-5" for="cat-description">Descripción</label>
+    <textarea id="cat-description" class="input" rows="3" formControlName="description"></textarea>
+
+    <label class="label mt-5" for="cat-icon">Icono</label>
+    <input id="cat-icon" class="input font-mono" placeholder="archive, clock, book-open…" formControlName="icon" />
+    <p class="mt-1 text-xs text-ink-faint">Nombre de un icono de Feather, que es el set que usa la app.</p>
+
+    @if (formError()) {
+      <p class="mt-4 text-sm text-danger">{{ formError() }}</p>
+    }
+
+    <div class="mt-6 flex gap-2">
+      <button type="submit" class="btn btn-primary flex-1" [disabled]="saving()">{{ editing() ? 'Guardar' : 'Crear' }}</button>
+      @if (editing()) {
+        <button type="button" class="btn btn-secondary" (click)="cancel()">Cancelar</button>
+      }
+    </div>
+  </form>
+</div>

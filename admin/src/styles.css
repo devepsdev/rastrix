@@ -1,0 +1,61 @@
+@import "tailwindcss";
+@source "./app";
+
+/* Misma identidad que la app móvil: papel, tinta cálida, terracota y verde inglés. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+
+  --color-paper: #FAF7F2;
+  --color-surface: #FFFFFF;
+  --color-sunken: #F2EDE4;
+  --color-ink: #1C1917;
+  --color-ink-muted: #6B6259;
+  --color-ink-faint: #9A9087;
+  --color-line: #E7DFD3;
+  --color-line-strong: #CFC4B4;
+  --color-accent: #B4532A;
+  --color-accent-strong: #97431F;
+  --color-accent-soft: #F7E9E1;
+  --color-support: #2F4F3A;
+  --color-support-soft: #E6EDE7;
+  --color-brass: #B8901F;
+  --color-danger: #A32B20;
+  --color-danger-soft: #F8E4E1;
+}
+
+/* Microtexto en mayúsculas espaciadas: el "sello" de la marca. */
+@utility eyebrow {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary { @apply bg-accent text-white hover:bg-accent-strong; }
+  .btn-secondary { @apply border border-line-strong bg-surface text-ink hover:bg-sunken; }
+  .btn-ghost { @apply text-accent hover:bg-accent-soft; }
+  .btn-danger { @apply border border-line-strong bg-surface text-danger hover:bg-danger-soft; }
+  .btn-sm { @apply h-8 px-3 text-xs; }
+
+  .input {
+    @apply h-10 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink outline-none placeholder:text-ink-faint focus:border-accent focus:ring-2 focus:ring-accent/15;
+  }
+  textarea.input { @apply h-auto min-h-24 py-2 leading-relaxed; }
+  select.input { @apply pr-8; }
+  .input-error { @apply border-danger focus:border-danger focus:ring-danger/15; }
+
+  .label { @apply eyebrow mb-1.5 block text-ink-faint; }
+  .field-error { @apply mt-1 text-xs text-danger; }
+  .card { @apply rounded-2xl border border-line bg-surface; }
+  .badge { @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wider uppercase; }
+
+  .nav-link { @apply flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-sunken hover:text-ink; }
+  .nav-active { @apply bg-accent-soft text-accent hover:bg-accent-soft hover:text-accent; }
+  .nav-count { @apply rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-white; }
+}

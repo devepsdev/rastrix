@@ -1,0 +1,112 @@
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <p class="eyebrow text-accent">Catálogo</p>
+    <h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Mercados</h1>
+  </div>
+  <a routerLink="/mercados/nuevo" class="btn btn-primary">Nuevo mercado</a>
+</div>
+
+<div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+  <div class="flex rounded-full border border-line bg-surface p-1">
+    @for (tab of tabs; track tab.value) {
+      <button
+        type="button"
+        class="cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
+        [class]="status() === tab.value ? 'bg-ink text-paper' : 'text-ink-muted hover:text-ink'"
+        (click)="setStatus(tab.value)"
+      >
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <input
+    type="search"
+    class="input max-w-xs"
+    placeholder="Buscar por nombre, ciudad o provincia"
+    [value]="query()"
+    (input)="onSearch($any($event.target).value)"
+  />
+</div>
+
+<div class="card mt-5 overflow-hidden">
+  @if (loading() && !result()) {
+    @for (row of [1, 2, 3, 4]; track row) {
+      <div class="flex items-center gap-4 border-b border-line px-5 py-4 last:border-0">
+        <div class="size-12 animate-pulse rounded-lg bg-sunken"></div>
+        <div class="h-4 w-1/3 animate-pulse rounded bg-sunken"></div>
+      </div>
+    }
+  } @else if (error()) {
+    <div class="px-5 py-12 text-center">
+      <p class="text-danger">{{ error() }}</p>
+    </div>
+  } @else if (result(); as page) {
+    @if (page.content.length === 0) {
+      <div class="px-5 py-16 text-center">
+        <p class="font-serif text-xl font-semibold">
+          {{ status() === 'ocultos' ? 'No hay mercados ocultos' : 'No hay mercados que mostrar' }}
+        </p>
+        <p class="mt-1 text-sm text-ink-muted">
+          {{ query() ? 'Prueba con otra búsqueda.' : status() === 'ocultos' ? 'Todo lo que hay en el catálogo está publicado.' : 'Crea el primero con el botón de arriba.' }}
+        </p>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead>
+            <tr class="border-b border-line bg-paper/60">
+              <th class="eyebrow px-5 py-3 text-ink-faint">Mercado</th>
+              <th class="eyebrow hidden px-5 py-3 text-ink-faint md:table-cell">Periodicidad</th>
+              <th class="eyebrow px-5 py-3 text-ink-faint">Estado</th>
+              <th class="eyebrow hidden px-5 py-3 text-ink-faint lg:table-cell">Actualizado</th>
+              <th class="px-5 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (market of page.content; track market.id) {
+              <tr class="cursor-pointer border-b border-line transition-colors last:border-0 hover:bg-paper" (click)="open(market)">
+                <td class="px-5 py-3">
+                  <div class="flex items-center gap-3">
+                    @if (market.mainImage) {
+                      <img [src]="market.mainImage" alt="" class="size-12 shrink-0 rounded-lg border border-line object-cover" />
+                    } @else {
+                      <div class="size-12 shrink-0 rounded-lg border border-line bg-sunken"></div>
+                    }
+                    <div class="min-w-0">
+                      <p class="truncate font-semibold">{{ market.name }}</p>
+                      <p class="truncate text-xs text-ink-muted">
+                        {{ market.city ?? 'Sin ciudad' }}{{ market.province && market.province !== market.city ? ', ' + market.province : '' }}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+                <td class="hidden px-5 py-3 text-ink-muted md:table-cell">{{ scheduleLabel(market) }}</td>
+                <td class="px-5 py-3">
+                  @if (market.active) {
+                    <span class="badge bg-support-soft text-support">Publicado</span>
+                  } @else {
+                    <span class="badge bg-accent-soft text-accent">Oculto</span>
+                  }
+                </td>
+                <td class="hidden px-5 py-3 text-ink-muted lg:table-cell">{{ market.fechaActualizacion | date: 'd MMM y' }}</td>
+                <td class="px-5 py-3 text-right">
+                  <button
+                    type="button"
+                    class="btn btn-sm"
+                    [class]="market.active ? 'btn-secondary' : 'btn-primary'"
+                    [disabled]="busyId() === market.id"
+                    (click)="toggleActive(market, $event)"
+                  >
+                    {{ market.active ? 'Ocultar' : 'Publicar' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-pagination [page]="page.pageNumber" [totalPages]="page.totalPages" [totalElements]="page.totalElements" (pageChange)="goToPage($event)" />
+    }
+  }
+</div>

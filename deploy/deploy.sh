@@ -16,12 +16,12 @@
 #                                       reutiliza tal cual lo ya guardado en
 #                                       rastrix.env. Pensado para "he hecho
 #                                       git pull, quiero la versión nueva
-#                                       corriendo" — recompila, reinstala el
-#                                       .jar y reinicia el servicio. Falla con
+#                                       corriendo" — recompila backend y panel,
+#                                       reinstala ambos y reinicia. Falla con
 #                                       un mensaje claro si no hay un
 #                                       despliegue previo completo.
 #
-# Ejecutar siempre desde una copia del repositorio (necesita ../backend al lado).
+# Ejecutar siempre desde una copia del repositorio (necesita ../backend y ../admin al lado).
 
 set -euo pipefail
 
@@ -33,6 +33,9 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BACKEND_DIR="$REPO_ROOT/backend"
+ADMIN_DIR="$REPO_ROOT/admin"
+ADMIN_WEB_DIR="/var/www/rastrix-admin"
+NGINX_SITE="/etc/nginx/sites-available/rastrix.deveps.dev"
 
 INSTALL_DIR="/opt/apps/rastrix"
 ENV_FILE="$INSTALL_DIR/rastrix.env"
@@ -49,12 +52,18 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-for cmd in mysql java javac openssl useradd systemctl; do
+for cmd in mysql java javac openssl useradd systemctl node npm; do
     if ! command -v "$cmd" >/dev/null 2>&1; then
         echo "Falta el comando '$cmd'. Instálalo antes de continuar (recuerda que hace falta un JDK completo, no solo un JRE, para compilar)." >&2
         exit 1
     fi
 done
+
+# Angular 21 exige Node ^20.19, ^22.12 o >=24. Se comprueba antes de tocar nada.
+if ! node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit((a === 20 && b >= 19) || (a === 22 && b >= 12) || a >= 24 ? 0 : 1)'; then
+    echo "El panel de administración necesita Node 20.19+, 22.12+ o 24+ (instalado: $(node -v))." >&2
+    exit 1
+fi
 
 if [[ ! -f "$BACKEND_DIR/pom.xml" || ! -f "$BACKEND_DIR/mvnw" ]]; then
     echo "No se encuentra $BACKEND_DIR/pom.xml o $BACKEND_DIR/mvnw. Ejecuta este script desde una copia del repositorio." >&2
@@ -313,12 +322,39 @@ if [[ -z "$JAR_FILE" ]]; then
     exit 1
 fi
 
+# Se compila el panel antes de instalar nada: si falla, la versión anterior
+# (API y panel) sigue intacta en vez de quedar un despliegue a medias.
+echo "Compilando el panel de administración..."
+(cd "$ADMIN_DIR" && npm ci --no-audit --no-fund --loglevel=error && npx ng build)
+ADMIN_BUILD="$ADMIN_DIR/dist/admin/browser"
+if [[ ! -f "$ADMIN_BUILD/index.html" ]]; then
+    echo "No se ha generado el panel en $ADMIN_BUILD" >&2
+    exit 1
+fi
+
 echo "Instalando en $INSTALL_DIR..."
 cp "$JAR_FILE" "$INSTALL_DIR/rastrix.jar"
 # Ojo: chown solo del .jar, nunca "-R" sobre $INSTALL_DIR — ahí vive también
 # rastrix.env con permisos 640 (root:rastrix) que no queremos pisar.
 chown "$SERVICE_USER":"$SERVICE_USER" "$INSTALL_DIR/rastrix.jar"
 chmod 750 "$INSTALL_DIR/rastrix.jar"
+
+echo "Instalando el panel en $ADMIN_WEB_DIR..."
+mkdir -p "$ADMIN_WEB_DIR"
+# Se vacía antes de copiar: los ficheros llevan un hash en el nombre y sin esto
+# se acumularían los de cada versión anterior.
+find "$ADMIN_WEB_DIR" -mindepth 1 -delete
+cp -r "$ADMIN_BUILD"/. "$ADMIN_WEB_DIR"/
+# Aquí sí vale "-R": el directorio solo contiene ficheros estáticos públicos.
+chown -R www-data:www-data "$ADMIN_WEB_DIR"
+
+# Nginx no se toca desde aquí: el fichero lo gestiona también Certbot y está en
+# un servidor compartido con otros proyectos. Solo se avisa si falta la ruta.
+if [[ -f "$NGINX_SITE" ]] && ! grep -q "location /admin/" "$NGINX_SITE"; then
+    echo "AVISO: Nginx todavía no sirve el panel. Copia el bloque 'location /admin/' de" >&2
+    echo "deploy/nginx-rastrix.conf dentro del server que escucha en 443 de $NGINX_SITE" >&2
+    echo "y recarga con: sudo nginx -t && sudo systemctl reload nginx" >&2
+fi
 
 # ---------------------------------------------------------------------------
 # Servicio systemd
@@ -367,5 +403,6 @@ else
     echo "Despliegue completado."
 fi
 echo "Credenciales guardadas en: $ENV_FILE (permisos 640, propietario root:$SERVICE_USER)"
+echo "Panel de administración: https://rastrix.deveps.dev/admin/"
 echo "Ver logs de la app con: journalctl -u rastrix -f"
 echo "El backup de la base de datos se gestiona de forma centralizada para todos los proyectos del servidor, fuera de este script."

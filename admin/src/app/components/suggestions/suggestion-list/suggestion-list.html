@@ -1,0 +1,146 @@
+<p class="eyebrow text-accent">Comunidad</p>
+<h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">Sugerencias</h1>
+<p class="mt-2 text-sm text-ink-muted">Mercados que proponen los usuarios desde la app. Nada se publica sin pasar por aquí.</p>
+
+<div class="mt-8 flex rounded-full border border-line bg-surface p-1 w-fit">
+  @for (tab of tabs; track tab.label) {
+    <button
+      type="button"
+      class="cursor-pointer rounded-full px-4 py-1.5 text-sm font-medium transition-colors"
+      [class]="status() === tab.value ? 'bg-ink text-paper' : 'text-ink-muted hover:text-ink'"
+      (click)="setStatus(tab.value)"
+    >
+      {{ tab.label }}
+    </button>
+  }
+</div>
+
+<div class="mt-5 grid items-start gap-6 lg:grid-cols-5">
+  <!-- Listado -->
+  <div class="card overflow-hidden lg:col-span-2">
+    @if (loading() && !result()) {
+      <div class="h-48 animate-pulse bg-sunken"></div>
+    } @else if (result(); as page) {
+      @if (page.content.length === 0) {
+        <div class="px-5 py-16 text-center">
+          <p class="font-serif text-xl font-semibold">{{ status() === 'PENDIENTE' ? 'Todo revisado' : 'No hay sugerencias aquí' }}</p>
+          <p class="mt-1 text-sm text-ink-muted">
+            {{ status() === 'PENDIENTE' ? 'No queda ninguna sugerencia esperando.' : 'Prueba con otra pestaña.' }}
+          </p>
+        </div>
+      } @else {
+        <ul>
+          @for (suggestion of page.content; track suggestion.id) {
+            <li>
+              <button
+                type="button"
+                class="w-full cursor-pointer border-b border-line px-5 py-4 text-left transition-colors last:border-0 hover:bg-paper"
+                [class.bg-accent-soft]="selected()?.id === suggestion.id"
+                (click)="select(suggestion)"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <p class="font-semibold">{{ suggestion.name }}</p>
+                  @if (status() === null) {
+                    <span class="badge shrink-0 bg-sunken text-ink-muted">{{ statusLabels[suggestion.status] }}</span>
+                  }
+                </div>
+                <p class="mt-0.5 text-sm text-ink-muted">{{ suggestion.city }}{{ suggestion.province ? ', ' + suggestion.province : '' }}</p>
+                <p class="mt-1 text-xs text-ink-faint">{{ suggestion.userName ?? 'Usuario eliminado' }} · {{ suggestion.fechaCreacion | date: 'd MMM, HH:mm' }}</p>
+              </button>
+            </li>
+          }
+        </ul>
+        <app-pagination [page]="page.pageNumber" [totalPages]="page.totalPages" [totalElements]="page.totalElements" (pageChange)="goToPage($event)" />
+      }
+    }
+  </div>
+
+  <!-- Detalle -->
+  <div class="lg:col-span-3">
+    @if (selected(); as s) {
+      <article class="card p-6">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p class="eyebrow text-ink-faint">{{ statusLabels[s.status] }}</p>
+            <h2 class="mt-1 font-serif text-3xl font-bold tracking-tight">{{ s.name }}</h2>
+            <p class="mt-1 text-ink-muted">{{ s.city }}{{ s.province ? ', ' + s.province : '' }}</p>
+          </div>
+        </div>
+
+        <dl class="mt-6 grid gap-5 sm:grid-cols-2">
+          <div>
+            <dt class="label">Periodicidad</dt>
+            <dd>{{ s.frequency ? scheduleLabel(s) : 'No lo indica' }}</dd>
+          </div>
+          <div>
+            <dt class="label">Horario</dt>
+            <dd>
+              @if (s.startTime) {
+                {{ shortTime(s.startTime) }}{{ s.endTime ? ' – ' + shortTime(s.endTime) : '' }}
+              } @else {
+                No lo indica
+              }
+            </dd>
+          </div>
+          @if (s.address) {
+            <div class="sm:col-span-2"><dt class="label">Dirección</dt><dd>{{ s.address }}</dd></div>
+          }
+          @if (s.description) {
+            <div class="sm:col-span-2"><dt class="label">Descripción</dt><dd class="whitespace-pre-line leading-relaxed">{{ s.description }}</dd></div>
+          }
+          @if (s.contact) {
+            <div><dt class="label">Contacto aportado</dt><dd>{{ s.contact }}</dd></div>
+          }
+          <div>
+            <dt class="label">Enviada por</dt>
+            <dd>{{ s.userName ?? 'Usuario eliminado' }}</dd>
+            @if (s.userEmail) { <dd class="text-sm text-ink-muted">{{ s.userEmail }}</dd> }
+          </div>
+          @if (s.comment) {
+            <div class="sm:col-span-2 rounded-xl bg-sunken p-4">
+              <dt class="label">Comentario del usuario</dt>
+              <dd class="whitespace-pre-line text-sm leading-relaxed">{{ s.comment }}</dd>
+            </div>
+          }
+          @if (s.status === 'RECHAZADA') {
+            <div class="sm:col-span-2"><dt class="label">Motivo del rechazo</dt><dd>{{ s.rejectionReason ?? 'Sin motivo indicado' }}</dd></div>
+          }
+        </dl>
+
+        <div class="mt-8 border-t border-line pt-6">
+          @if (s.status === 'PENDIENTE') {
+            @if (rejecting()) {
+              <label class="label" for="reason">Motivo del rechazo (opcional)</label>
+              <textarea
+                id="reason"
+                class="input"
+                rows="3"
+                maxlength="255"
+                placeholder="Duplicado, datos insuficientes, no es un mercado de antigüedades…"
+                [value]="rejectReason()"
+                (input)="rejectReason.set($any($event.target).value)"
+              ></textarea>
+              <div class="mt-4 flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary" (click)="rejecting.set(false)">Cancelar</button>
+                <button type="button" class="btn btn-danger" [disabled]="busy()" (click)="reject()">Confirmar rechazo</button>
+              </div>
+            } @else {
+              <div class="flex flex-wrap justify-end gap-2">
+                <button type="button" class="btn btn-danger" (click)="rejecting.set(true)">Rechazar</button>
+                <a class="btn btn-primary" routerLink="/mercados/nuevo" [queryParams]="{ sugerencia: s.id }">Crear mercado con estos datos</a>
+              </div>
+            }
+          } @else if (s.status === 'APROBADA' && s.marketId) {
+            <div class="flex justify-end">
+              <a class="btn btn-secondary" [routerLink]="['/mercados', s.marketId]">Ver el mercado creado</a>
+            </div>
+          }
+        </div>
+      </article>
+    } @else {
+      <div class="rounded-2xl border border-dashed border-line-strong px-6 py-16 text-center">
+        <p class="text-ink-muted">Selecciona una sugerencia para ver sus datos.</p>
+      </div>
+    }
+  </div>
+</div>

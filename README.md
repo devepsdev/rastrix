@@ -17,6 +17,7 @@ mercado, favoritos, valoraciones y notificaciones.
 
 ```
 backend/   API REST (Spring Boot 4, Java 25)
+admin/     Panel web de administración (Angular 21 + Tailwind 4)
 frontend/  App Android (Expo / React Native) — en desarrollo
 db/        seed-demo.sql — catálogo de ejemplo para desarrollo local
 deploy/    Script de despliegue y configuración de Nginx para el servidor
@@ -123,6 +124,19 @@ IP real del cliente detrás de Nginx.
   un solo uso y se bloquea tras 5 intentos.
 - **Rate limiting**: máx. 5 intentos de login fallidos por email y 20 por IP cada
   15 min → `429` con cabecera `Retry-After`.
+- **401 frente a 403**: sin token, con token manipulado o **caducado** la API
+  responde `401`; con una sesión válida pero sin permiso, `403`. Los clientes
+  renuevan el access token automáticamente solo ante un `401`.
+
+### Mercados publicados y ocultos
+
+Un mercado con `active: false` está **oculto**: pendiente de revisión o
+retirado a mano. La API pública (`/api/markets/**`, la que usa la app) solo
+devuelve mercados publicados; pedir uno oculto por id da `404`.
+
+El panel de administración usa `GET /api/admin/markets` (`?active=&q=`, con
+búsqueda por nombre, ciudad o provincia) y `GET /api/admin/markets/{id}`, que sí
+incluyen los ocultos. Es la bandeja de revisión.
 
 ### Importación de mercados
 
@@ -145,6 +159,19 @@ La comparación ignora mayúsculas y espacios sobrantes, pero **no los acentos**
 Para operar contra este endpoint hace falta una cuenta `ADMIN`; se crea al
 arrancar informando `ADMIN_NAME`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`.
 
+### Sugerencias de usuarios
+
+Cualquier usuario registrado puede proponer un mercado desde la app con
+`POST /api/suggestions`, y consultar las suyas en `GET /api/suggestions/me`. Las
+sugerencias **no escriben en el catálogo**: quedan `PENDIENTE` hasta que un
+administrador las revisa en el panel.
+
+Desde ahí se aprueban (`PUT /api/admin/suggestions/{id}/approve` con el
+`marketId` del mercado creado a partir de ella) o se rechazan
+(`PUT /api/admin/suggestions/{id}/reject`, con motivo opcional que el usuario ve
+en la app). Una sugerencia resuelta no se puede volver a tocar. Para frenar el
+spam, cada usuario puede tener como máximo 10 pendientes a la vez.
+
 ### Roles y permisos
 
 Dos roles: `USER` (por defecto al registrarse) y `ADMIN`.
@@ -158,7 +185,8 @@ Dos roles: `USER` (por defecto al registrarse) y `ADMIN`.
 | notifications | el propio usuario | crear: solo `ADMIN` |
 | users (`/me`) | el propio usuario | el propio usuario |
 | users (listado, por id, rol, borrar) | solo `ADMIN` | solo `ADMIN` |
-| `admin/stats` | solo `ADMIN` | — |
+| suggestions (`/me` y alta) | el propio usuario | el propio usuario |
+| `admin/*` (stats, markets, suggestions) | solo `ADMIN` | solo `ADMIN` |
 
 Los endpoints de listado (`markets`, `exhibitors`, `users`) aceptan
 `?page=&size=&sort=`; tamaño por defecto 20, máximo 100. La especificación
@@ -176,19 +204,51 @@ Spring). Cubre reglas de negocio de los servicios (duplicados, propiedad de
 recursos, hash de contraseñas), el rate limiter, el flujo de recuperación de
 contraseña y la política de seguridad HTTP.
 
+## Panel de administración
+
+Web interna en `admin/` (Angular 21 zoneless + Tailwind 4, mismo stack que
+Pedidai y misma identidad visual que la app). Solo entran cuentas `ADMIN`: el
+login acepta cualquier cuenta, pero si no es administradora se cierra la sesión
+en el acto y se revoca su refresh token.
+
+Pantallas: resumen con tareas pendientes, mercados (listado con búsqueda,
+filtro publicados/ocultos, alta y edición completa con categorías y galería),
+sugerencias (revisión, alta del mercado precargada y rechazo), categorías y
+usuarios (roles y bajas).
+
+En local, con el backend en el puerto 8080:
+
+```bash
+cd admin
+npm install
+npm start
+```
+
+Queda en `http://localhost:4200`; `proxy.conf.json` reenvía `/api` al backend,
+así que no hace falta CORS. Para tener una cuenta de administrador en local,
+regístrate desde la app y asciéndela:
+
+```bash
+mysql -u root rastrix -e "UPDATE usuarios SET role='ADMIN' WHERE email='tu@correo';"
+```
+
 ## Despliegue
 
 El backend corre en producción en **https://rastrix.deveps.dev**, como servicio
 systemd detrás de Nginx con certificado Let's Encrypt, instalado en
-`/opt/apps/rastrix/`.
+`/opt/apps/rastrix/`. El panel se sirve en **https://rastrix.deveps.dev/admin/**
+desde `/var/www/rastrix-admin`, en el mismo dominio que la API.
 
 - `deploy/deploy.sh` — despliegue completo interactivo: pide y guarda las
-  credenciales en `/opt/apps/rastrix/rastrix.env` (permisos `640`), compila,
-  instala el jar y configura el servicio.
+  credenciales en `/opt/apps/rastrix/rastrix.env` (permisos `640`), compila
+  backend y panel, los instala y configura el servicio. Necesita Node 20.19+
+  en el servidor para compilar el panel.
 - `deploy/deploy.sh --redeploy` — redespliegue rápido: sin preguntas, reutiliza
   la configuración ya guardada; recompila, reinstala y reinicia.
-- `deploy/nginx-rastrix.conf` — bloque de Nginx para `rastrix.deveps.dev`
-  (proxy a la app + cabeceras `X-Forwarded-*`).
+- `deploy/nginx-rastrix.conf` — configuración de Nginx para `rastrix.deveps.dev`:
+  el panel en `/admin/` y el resto como proxy al backend. En un servidor ya
+  configurado por Certbot no se sustituye el fichero; se copian los bloques
+  `location` del panel dentro del server 443. `deploy.sh` avisa si faltan.
 
 El backup de la base de datos se gestiona de forma centralizada en el servidor,
 fuera de este repositorio.

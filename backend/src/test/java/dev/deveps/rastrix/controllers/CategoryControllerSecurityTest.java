@@ -2,6 +2,7 @@ package dev.deveps.rastrix.controllers;
 
 import dev.deveps.rastrix.dto.response.CategoryResponse;
 import dev.deveps.rastrix.security.CustomUserDetailsService;
+import dev.deveps.rastrix.security.JsonAuthenticationEntryPoint;
 import dev.deveps.rastrix.security.JwtAuthenticationFilter;
 import dev.deveps.rastrix.security.JwtService;
 import dev.deveps.rastrix.security.PasswordEncoderConfig;
@@ -31,7 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * "catálogo": lectura pública, escritura solo ADMIN.
  */
 @WebMvcTest(CategoryController.class)
-@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, PasswordEncoderConfig.class})
+@Import({SecurityConfig.class, JwtAuthenticationFilter.class, JwtService.class, PasswordEncoderConfig.class,
+        JsonAuthenticationEntryPoint.class})
 class CategoryControllerSecurityTest {
 
     @Autowired
@@ -52,11 +54,11 @@ class CategoryControllerSecurityTest {
     }
 
     @Test
-    void createWithoutAuthenticationIsRejected() throws Exception {
+    void createWithoutAuthenticationIsUnauthorized() throws Exception {
         mockMvc.perform(post("/api/categories")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Muebles\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

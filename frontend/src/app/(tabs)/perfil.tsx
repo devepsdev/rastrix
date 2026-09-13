@@ -84,6 +84,12 @@ export default function ProfileScreen() {
 
           <View style={{ marginTop: theme.spacing.xxl }}>
             <MenuRow
+              icon="map-pin"
+              label="Sugerir un mercado"
+              onPress={() => router.push("/sugerir")}
+            />
+            <Divider />
+            <MenuRow
               icon="bell"
               label="Notificaciones"
               onPress={() => router.push("/notificaciones")}

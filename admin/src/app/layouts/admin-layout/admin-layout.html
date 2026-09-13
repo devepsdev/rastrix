@@ -1,0 +1,63 @@
+<div class="min-h-screen lg:flex">
+  <!-- Barra superior en móvil -->
+  <header class="flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden">
+    <span class="font-serif text-xl font-bold tracking-tight">Rastrix</span>
+    <button type="button" class="btn btn-secondary btn-sm" (click)="menuOpen.set(!menuOpen())">Menú</button>
+  </header>
+
+  <aside
+    class="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-line bg-surface transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0"
+    [class.-translate-x-full]="!menuOpen()"
+  >
+    <div class="px-6 pt-7 pb-6">
+      <p class="font-serif text-[28px] leading-none font-bold tracking-tight">Rastrix</p>
+      <p class="eyebrow mt-2 text-ink-faint">Administración</p>
+    </div>
+
+    <nav class="flex flex-1 flex-col gap-0.5 px-3">
+      <a routerLink="/" [routerLinkActiveOptions]="{ exact: true }" routerLinkActive="nav-active" class="nav-link">Resumen</a>
+
+      <a routerLink="/mercados" routerLinkActive="nav-active" class="nav-link">
+        <span class="flex-1">Mercados</span>
+        @if (statsService.stats(); as s) {
+          @if (s.totalMarkets - s.activeMarkets > 0) {
+            <span class="nav-count" title="Mercados ocultos o pendientes de revisar">{{ s.totalMarkets - s.activeMarkets }}</span>
+          }
+        }
+      </a>
+
+      <a routerLink="/sugerencias" routerLinkActive="nav-active" class="nav-link">
+        <span class="flex-1">Sugerencias</span>
+        @if (statsService.stats(); as s) {
+          @if (s.pendingSuggestions > 0) {
+            <span class="nav-count" title="Sugerencias pendientes">{{ s.pendingSuggestions }}</span>
+          }
+        }
+      </a>
+
+      <a routerLink="/categorias" routerLinkActive="nav-active" class="nav-link">Categorías</a>
+      <a routerLink="/usuarios" routerLinkActive="nav-active" class="nav-link">Usuarios</a>
+    </nav>
+
+    <div class="border-t border-line px-6 py-5">
+      @if (auth.user(); as user) {
+        <p class="truncate text-sm font-semibold">{{ user.name }}</p>
+        <p class="truncate text-xs text-ink-muted">{{ user.email }}</p>
+      }
+      <button type="button" class="btn btn-ghost btn-sm mt-3 -ml-3" (click)="auth.logout()">Cerrar sesión</button>
+    </div>
+  </aside>
+
+  @if (menuOpen()) {
+    <div class="fixed inset-0 z-20 bg-ink/40 lg:hidden" (click)="menuOpen.set(false)"></div>
+  }
+
+  <main class="min-w-0 flex-1">
+    <div class="mx-auto max-w-6xl px-5 py-8 lg:px-10 lg:py-10">
+      <router-outlet />
+    </div>
+  </main>
+</div>
+
+<app-toast-host />
+<app-confirm-host />

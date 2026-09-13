@@ -11,7 +11,7 @@ interface InputProps extends Omit<TextInputProps, "style"> {
   containerStyle?: ViewStyle;
 }
 
-export function Input({ label, error, icon, containerStyle, ...rest }: InputProps) {
+export function Input({ label, error, icon, containerStyle, multiline, ...rest }: InputProps) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
 
@@ -32,9 +32,10 @@ export function Input({ label, error, icon, containerStyle, ...rest }: InputProp
       <View
         style={{
           flexDirection: "row",
-          alignItems: "center",
+          alignItems: multiline ? "flex-start" : "center",
           gap: theme.spacing.md,
-          height: 52,
+          // Los campos de varias líneas crecen; el resto mantiene la altura fija.
+          ...(multiline ? { minHeight: 112, paddingVertical: theme.spacing.md } : { height: 52 }),
           paddingHorizontal: theme.spacing.lg,
           borderRadius: theme.radius.md,
           borderWidth: 1,
@@ -44,6 +45,8 @@ export function Input({ label, error, icon, containerStyle, ...rest }: InputProp
       >
         {icon ? <Feather name={icon} size={17} color={theme.colors.inkFaint} /> : null}
         <TextInput
+          multiline={multiline}
+          textAlignVertical={multiline ? "top" : "center"}
           style={[theme.typography.body, { flex: 1, color: theme.colors.ink, padding: 0 }]}
           placeholderTextColor={theme.colors.inkFaint}
           onFocus={() => setFocused(true)}

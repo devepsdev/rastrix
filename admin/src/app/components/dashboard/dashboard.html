@@ -1,0 +1,66 @@
+<p class="eyebrow text-accent">Resumen</p>
+<h1 class="mt-1 font-serif text-4xl font-bold tracking-tight">{{ greeting() }}</h1>
+
+@if (stats(); as s) {
+  <!-- Tareas pendientes: lo primero que hay que ver al entrar -->
+  <section class="mt-8 grid gap-4 md:grid-cols-2">
+    <a routerLink="/sugerencias" class="card group flex items-center gap-5 p-6 transition-colors hover:border-accent">
+      <span class="font-serif text-5xl font-bold" [class.text-accent]="s.pendingSuggestions > 0" [class.text-ink-faint]="s.pendingSuggestions === 0">
+        {{ s.pendingSuggestions }}
+      </span>
+      <span class="flex-1">
+        <span class="block font-semibold">Sugerencias por revisar</span>
+        <span class="block text-sm text-ink-muted">
+          {{ s.pendingSuggestions === 0 ? 'Nada pendiente.' : 'Mercados que proponen los usuarios.' }}
+        </span>
+      </span>
+      <span class="text-ink-faint transition-transform group-hover:translate-x-1">→</span>
+    </a>
+
+    <a routerLink="/mercados" [queryParams]="{ estado: 'ocultos' }" class="card group flex items-center gap-5 p-6 transition-colors hover:border-accent">
+      <span class="font-serif text-5xl font-bold" [class.text-accent]="hiddenMarkets() > 0" [class.text-ink-faint]="hiddenMarkets() === 0">
+        {{ hiddenMarkets() }}
+      </span>
+      <span class="flex-1">
+        <span class="block font-semibold">Mercados ocultos</span>
+        <span class="block text-sm text-ink-muted">
+          {{ hiddenMarkets() === 0 ? 'Todo publicado.' : 'Pendientes de revisar o retirados.' }}
+        </span>
+      </span>
+      <span class="text-ink-faint transition-transform group-hover:translate-x-1">→</span>
+    </a>
+  </section>
+
+  <section class="mt-10">
+    <p class="eyebrow mb-4 text-ink-faint">Catálogo y comunidad</p>
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div class="card p-5">
+        <p class="text-sm text-ink-muted">Mercados publicados</p>
+        <p class="mt-2 font-serif text-3xl font-bold">{{ s.activeMarkets }}</p>
+        <p class="mt-1 text-xs text-ink-faint">de {{ s.totalMarkets }} en total</p>
+      </div>
+      <div class="card p-5">
+        <p class="text-sm text-ink-muted">Usuarios</p>
+        <p class="mt-2 font-serif text-3xl font-bold">{{ s.totalUsers }}</p>
+        <p class="mt-1 text-xs text-ink-faint">{{ s.totalAdmins }} {{ s.totalAdmins === 1 ? 'administrador' : 'administradores' }}</p>
+      </div>
+      <div class="card p-5">
+        <p class="text-sm text-ink-muted">Valoraciones</p>
+        <p class="mt-2 font-serif text-3xl font-bold">{{ s.totalRatings }}</p>
+        <p class="mt-1 text-xs text-ink-faint">
+          {{ s.averageRating === null ? 'Sin media todavía' : 'Media ' + (s.averageRating | number: '1.1-1') + ' ★' }}
+        </p>
+      </div>
+      <div class="card p-5">
+        <p class="text-sm text-ink-muted">Favoritos guardados</p>
+        <p class="mt-2 font-serif text-3xl font-bold">{{ s.totalFavorites }}</p>
+        <p class="mt-1 text-xs text-ink-faint">{{ s.totalCategories }} categorías · {{ s.totalExhibitors }} expositores</p>
+      </div>
+    </div>
+  </section>
+} @else {
+  <div class="mt-8 grid gap-4 md:grid-cols-2">
+    <div class="card h-28 animate-pulse bg-sunken"></div>
+    <div class="card h-28 animate-pulse bg-sunken"></div>
+  </div>
+}

@@ -7,6 +7,8 @@ export type Role = "USER" | "ADMIN";
 
 export type MarketFrequency = "diario" | "semanal" | "quincenal" | "mensual" | "puntual";
 
+export type SuggestionStatus = "PENDIENTE" | "APROBADA" | "RECHAZADA";
+
 export type DayOfWeek =
   | "lunes"
   | "martes"
@@ -126,6 +128,22 @@ export interface NotificationRequest {
   title: string;
   message?: string | null;
   read: boolean;
+}
+
+export interface SuggestionRequest {
+  name: string;
+  city: string;
+  province?: string | null;
+  address?: string | null;
+  frequency?: MarketFrequency | null;
+  dayOfWeek?: DayOfWeek | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  description?: string | null;
+  contact?: string | null;
+  comment?: string | null;
 }
 
 // ---------- Responses ----------
@@ -251,6 +269,32 @@ export interface NotificationResponse {
   fechaActualizacion: string;
 }
 
+export interface SuggestionResponse {
+  id: number;
+  uuid: string;
+  userId: number;
+  userName: string | null;
+  userEmail: string | null;
+  name: string;
+  city: string;
+  province: string | null;
+  address: string | null;
+  frequency: MarketFrequency | null;
+  dayOfWeek: DayOfWeek | null;
+  startDate: string | null;
+  endDate: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  description: string | null;
+  contact: string | null;
+  comment: string | null;
+  status: SuggestionStatus;
+  marketId: number | null;
+  rejectionReason: string | null;
+  fechaCreacion: string;
+  fechaActualizacion: string;
+}
+
 export interface StatsResponse {
   totalUsers: number;
   totalAdmins: number;
@@ -264,6 +308,7 @@ export interface StatsResponse {
   averageRating: number | null;
   totalNotifications: number;
   unreadNotifications: number;
+  pendingSuggestions: number;
 }
 
 export interface PageResponse<T> {
