@@ -38,7 +38,16 @@ git clone https://github.com/devepsdev/rastrix.git /opt/apps/rastrix-src
 bash /opt/apps/rastrix-src/scraper/scripts/install.sh
 ```
 
-Rellena `/opt/apps/rastrix-scraper/.env` y prueba sin enviar nada:
+Crea la configuración con el asistente, que pide cada dato, comprueba la cuenta
+del bot y la clave de DeepSeek, y guarda `/opt/apps/rastrix-scraper/.env` con
+permisos 600 (Enter mantiene los valores actuales, así que sirve también para
+cambiar la contraseña o la clave más adelante):
+
+```bash
+python3 /opt/apps/rastrix-src/scraper/scripts/configure.py
+```
+
+Y prueba sin enviar nada:
 
 ```bash
 cd /opt/apps/rastrix-src/scraper

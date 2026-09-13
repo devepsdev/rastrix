@@ -50,16 +50,20 @@ fi
 "$HOME_DIR/venv/bin/pip" install --quiet --upgrade pip
 "$HOME_DIR/venv/bin/pip" install --quiet -r "$SRC_DIR/scraper/requirements.txt"
 
-if [[ ! -f "$HOME_DIR/.env" ]]; then
-    cp "$SRC_DIR/scraper/.env.example" "$HOME_DIR/.env"
-    echo "Creado $HOME_DIR/.env: rellena la cuenta del bot y la clave de DeepSeek."
+if [[ -f "$HOME_DIR/.env" ]]; then
+    # Contiene la contraseña del bot y la clave de DeepSeek: solo para su dueño.
+    chmod 600 "$HOME_DIR/.env"
 fi
-# Contiene la contraseña del bot y la clave de DeepSeek: solo para su dueño.
-chmod 600 "$HOME_DIR/.env"
 
 # Se sustituye la línea anterior en vez de añadir otra en cada instalación.
 { crontab -l 2>/dev/null | grep -v "$CRON_TAG" || true; echo "$CRON_LINE"; } | crontab -
 echo "Pasada semanal programada en el crontab de $RUN_USER (lunes 06:00)."
 
-echo "Scraper instalado. Prueba sin enviar nada con:"
-echo "  cd $SRC_DIR/scraper && SCRAPER_HOME=$HOME_DIR $HOME_DIR/venv/bin/python main.py --dry-run"
+echo "Scraper instalado."
+if [[ ! -f "$HOME_DIR/.env" ]]; then
+    echo "Falta la configuración. Créala con:"
+    echo "  python3 $SRC_DIR/scraper/scripts/configure.py"
+else
+    echo "Prueba sin enviar nada con:"
+    echo "  cd $SRC_DIR/scraper && SCRAPER_HOME=$HOME_DIR $HOME_DIR/venv/bin/python main.py --dry-run"
+fi
