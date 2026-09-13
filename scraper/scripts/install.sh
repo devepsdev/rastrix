@@ -40,7 +40,6 @@ if [[ ! -f "$HOME_DIR/.env" ]]; then
 fi
 # Contiene la contraseña del bot y la clave de DeepSeek: solo para su dueño.
 chmod 600 "$HOME_DIR/.env"
-chmod +x "$SRC_DIR/scraper/scripts/run_weekly.sh"
 
 sed "s/__RUN_USER__/$RUN_USER/" "$SRC_DIR/scraper/deploy/rastrix-scraper.cron" | sudo tee "$CRON_FILE" > /dev/null
 sudo chmod 644 "$CRON_FILE"
