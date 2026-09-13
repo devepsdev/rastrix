@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
@@ -57,25 +58,33 @@ public class PasswordResetService {
      * Deliberadamente lanza el mismo mensaje genérico tanto si el código no
      * existe, ha caducado, se han agotado los intentos o simplemente no
      * coincide, para no dar pistas de cuál fue el motivo exacto.
+     *
+     * Va en su propia transacción y no se deshace al lanzar la excepción: si
+     * se uniera a la de quien la llama (AuthServiceImpl es transaccional), el
+     * rollback provocado por el código incorrecto borraría también el intento
+     * gastado y el contador no pasaría nunca de 0.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW, noRollbackFor = InvalidDataException.class)
     public void verifyCode(Long userId, String rawCode) {
         PasswordResetToken token = passwordResetTokenRepository.findByUserIdAndUsedFalse(userId)
                 .orElseThrow(this::invalidCode);
 
-        if (token.getExpiresAt().isBefore(LocalDateTime.now()) || token.getAttempts() >= MAX_ATTEMPTS) {
+        if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
             passwordResetTokenRepository.delete(token);
             throw invalidCode();
         }
 
-        if (!HashUtils.sha256(rawCode).equals(token.getCodeHash())) {
-            token.setAttempts(token.getAttempts() + 1);
-            passwordResetTokenRepository.save(token);
+        // Cada comprobación gasta un intento antes de comparar, también la buena.
+        if (passwordResetTokenRepository.consumeAttempt(token.getId(), MAX_ATTEMPTS) == 0) {
+            passwordResetTokenRepository.deleteById(token.getId());
             throw invalidCode();
         }
 
-        token.setUsed(true);
-        passwordResetTokenRepository.save(token);
+        if (!HashUtils.sha256(rawCode).equals(token.getCodeHash())) {
+            throw invalidCode();
+        }
+
+        passwordResetTokenRepository.markUsed(token.getId());
     }
 
     @Scheduled(fixedRate = 24 * 60 * 60 * 1000)

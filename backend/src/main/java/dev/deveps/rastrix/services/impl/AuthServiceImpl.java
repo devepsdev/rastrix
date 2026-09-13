@@ -93,11 +93,24 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void resetPassword(ResetPasswordRequest request) {
-        UserResponse user = userService.findByEmailOptional(request.email())
-                .orElseThrow(() -> new InvalidDataException("El código no es válido o ha caducado"));
-        passwordResetService.verifyCode(user.id(), request.code());
-        userService.overwritePassword(user.id(), request.newPassword());
+    public void resetPassword(ResetPasswordRequest request, String clientIp) {
+        // El contador de cada código ya limita a 5 intentos, pero pedir un código
+        // nuevo lo reinicia. Este límite, que no depende del código, impide
+        // encadenar códigos para seguir probando.
+        String emailKey = "reset-verify:" + request.email();
+        String ipKey = "reset-verify:" + clientIp;
+        loginRateLimiter.checkAllowed(emailKey, ipKey);
+
+        try {
+            UserResponse user = userService.findByEmailOptional(request.email())
+                    .orElseThrow(() -> new InvalidDataException("El código no es válido o ha caducado"));
+            passwordResetService.verifyCode(user.id(), request.code());
+            userService.overwritePassword(user.id(), request.newPassword());
+        } catch (InvalidDataException ex) {
+            loginRateLimiter.recordFailure(emailKey, ipKey);
+            throw ex;
+        }
+        loginRateLimiter.recordSuccess(emailKey, ipKey);
     }
 
     private AuthResponse buildAuthResponse(UserResponse user) {
