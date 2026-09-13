@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,6 +31,14 @@ public class MarketController {
     @GetMapping
     public PageResponse<MarketResponse> findAll(Pageable pageable) {
         return marketService.findAll(pageable);
+    }
+
+    @GetMapping("/search")
+    public PageResponse<MarketResponse> search(
+            @RequestParam(name = "q", required = false) String query,
+            @RequestParam(required = false) Long categoryId,
+            Pageable pageable) {
+        return marketService.search(query, categoryId, pageable);
     }
 
     @GetMapping("/{id}")

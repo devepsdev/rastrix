@@ -106,3 +106,17 @@ export function opensThisWeekend(market: MarketResponse): boolean {
   }
   return false;
 }
+
+/** Fecha de publicación legible: "hoy", "ayer", "hace 3 días" o "12 sep 2026". */
+export function formatRelativeDate(value: string, now: Date = new Date()): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const startOfDay = (day: Date) => new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+  const days = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+
+  if (days <= 0) return "hoy";
+  if (days === 1) return "ayer";
+  if (days < 7) return `hace ${days} días`;
+  return `${date.getDate()} ${MONTH_SHORT[date.getMonth()]} ${date.getFullYear()}`;
+}

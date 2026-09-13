@@ -3,6 +3,7 @@ package dev.deveps.rastrix.services.impl;
 import dev.deveps.rastrix.dto.request.RatingRequest;
 import dev.deveps.rastrix.dto.response.RatingResponse;
 import dev.deveps.rastrix.entities.Rating;
+import dev.deveps.rastrix.entities.User;
 import dev.deveps.rastrix.exception.DuplicateResourceException;
 import dev.deveps.rastrix.exception.ResourceNotFoundException;
 import dev.deveps.rastrix.repositories.MarketRepository;
@@ -13,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +33,7 @@ public class RatingServiceImpl implements RatingService {
         if (!userRepository.existsById(request.userId())) {
             throw new ResourceNotFoundException("No existe ningún usuario con id: " + request.userId());
         }
-        if (!marketRepository.existsById(request.marketId())) {
+        if (marketRepository.findByIdAndActiveTrue(request.marketId()).isEmpty()) {
             throw new ResourceNotFoundException("No existe ningún mercado con id: " + request.marketId());
         }
         if (ratingRepository.existsByUserIdAndMarketId(request.userId(), request.marketId())) {
@@ -66,8 +70,14 @@ public class RatingServiceImpl implements RatingService {
     @Override
     @Transactional(readOnly = true)
     public List<RatingResponse> findByMarketId(Long marketId) {
-        return ratingRepository.findByMarketId(marketId).stream()
-                .map(this::toResponse)
+        List<Rating> ratings = ratingRepository.findByMarketId(marketId);
+        // Una sola consulta para los autores en vez de una por valoración.
+        Map<Long, String> names = userRepository.findAllById(ratings.stream().map(Rating::getUserId).distinct().toList())
+                .stream()
+                .collect(Collectors.toMap(User::getId, User::getName));
+        return ratings.stream()
+                .sorted(Comparator.comparing(Rating::getFechaCreacion, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(rating -> toResponse(rating, names.get(rating.getUserId())))
                 .toList();
     }
 
@@ -77,10 +87,16 @@ public class RatingServiceImpl implements RatingService {
     }
 
     private RatingResponse toResponse(Rating rating) {
+        String userName = userRepository.findById(rating.getUserId()).map(User::getName).orElse(null);
+        return toResponse(rating, userName);
+    }
+
+    private RatingResponse toResponse(Rating rating, String userName) {
         return new RatingResponse(
                 rating.getId(),
                 rating.getUuid(),
                 rating.getUserId(),
+                userName,
                 rating.getMarketId(),
                 rating.getScore(),
                 rating.getComment(),

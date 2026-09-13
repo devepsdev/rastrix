@@ -28,6 +28,9 @@ public interface MarketService {
     /** Panel de administración: incluye ocultos, con filtros opcionales. */
     PageResponse<MarketResponse> searchForAdmin(Boolean active, String query, Pageable pageable);
 
+    /** App: solo publicados, filtrando por texto (nombre, ciudad, provincia) y categoría. */
+    PageResponse<MarketResponse> search(String query, Long categoryId, Pageable pageable);
+
     MarketResponse findById(Long id);
 
     MarketResponse findByUuid(String uuid);

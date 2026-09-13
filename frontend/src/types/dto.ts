@@ -252,6 +252,8 @@ export interface RatingResponse {
   id: number;
   uuid: string;
   userId: number;
+  /** Nombre público del autor; null si la cuenta ya no existe. */
+  userName: string | null;
   marketId: number;
   score: number;
   comment: string | null;

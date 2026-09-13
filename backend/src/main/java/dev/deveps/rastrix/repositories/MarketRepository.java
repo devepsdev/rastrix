@@ -37,6 +37,19 @@ public interface MarketRepository extends JpaRepository<Market, Long> {
             """)
     Page<Market> searchForAdmin(@Param("active") Boolean active, @Param("query") String query, Pageable pageable);
 
+    /** Búsqueda de la app: solo publicados, por texto y opcionalmente por categoría. */
+    @Query("""
+            SELECT m FROM Market m
+            WHERE m.active = true
+              AND (:query IS NULL
+                   OR LOWER(m.name) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(m.city) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(m.province) LIKE LOWER(CONCAT('%', :query, '%')))
+              AND (:categoryId IS NULL OR EXISTS (
+                   SELECT 1 FROM MarketCategory mc WHERE mc.marketId = m.id AND mc.categoryId = :categoryId))
+            """)
+    Page<Market> searchPublished(@Param("query") String query, @Param("categoryId") Long categoryId, Pageable pageable);
+
     /**
      * Busca por la clave natural del mercado (nombre + ciudad), que es lo que
      * usa el importador para decidir si crea o actualiza. Se escribe a mano

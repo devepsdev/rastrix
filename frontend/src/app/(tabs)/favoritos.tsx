@@ -19,11 +19,19 @@ export default function FavoritesScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
 
-  const favorites = useAsync(
-    () => (isAuthenticated ? favoritesApi.findMine() : Promise.resolve([])),
-    [isAuthenticated]
-  );
-  const markets = useAsync(() => marketsApi.findAll({ size: 100 }), []);
+  // Se piden solo los mercados guardados. Uno que se haya ocultado después
+  // devuelve 404 y simplemente deja de aparecer en la lista.
+  const favorites = useAsync(async () => {
+    if (!isAuthenticated) return [];
+    const mine = await favoritesApi.findMine();
+    const markets = await Promise.all(
+      mine.map((favorite) => marketsApi.findById(favorite.marketId).catch(() => null))
+    );
+    return mine.flatMap((favorite, index) => {
+      const market = markets[index];
+      return market ? [{ favorite, market }] : [];
+    });
+  }, [isAuthenticated]);
 
   // Al volver del detalle, el mercado puede haberse añadido o quitado allí.
   const reloadFavorites = favorites.reload;
@@ -33,14 +41,7 @@ export default function FavoritesScreen() {
     }, [isAuthenticated, reloadFavorites])
   );
 
-  const favoriteMarkets = (favorites.data ?? [])
-    .map((favorite) => ({
-      favorite,
-      market: markets.data?.content.find((item) => item.id === favorite.marketId),
-    }))
-    .filter((entry): entry is { favorite: (typeof entry)["favorite"]; market: NonNullable<(typeof entry)["market"]> } =>
-      Boolean(entry.market)
-    );
+  const favoriteMarkets = favorites.data ?? [];
 
   const removeFavorite = async (favoriteId: number) => {
     await favoritesApi.remove(favoriteId);

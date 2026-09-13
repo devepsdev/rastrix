@@ -12,20 +12,28 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Text } from "@/components/ui/Text";
 import { opensThisWeekend } from "@/lib/format";
+import { ListFooter } from "@/components/ListFooter";
 import { useAsync } from "@/lib/useAsync";
+import { usePagedList } from "@/lib/usePagedList";
 import { useTheme } from "@/theme";
 import type { MarketResponse } from "@/types/dto";
 import { useRouter } from "expo-router";
 import { RefreshControl, ScrollView, View } from "react-native";
 
+const PAGE_SIZE = 30;
+
 export default function DiscoverScreen() {
   const theme = useTheme();
   const router = useRouter();
 
-  const markets = useAsync(() => marketsApi.findAll({ size: 30 }), []);
+  // Más recientes primero; el resto del directorio se carga al llegar al final.
+  const markets = usePagedList(
+    (page) => marketsApi.findAll({ page, size: PAGE_SIZE, sort: "id,desc" }),
+    []
+  );
   const categories = useAsync(() => categoriesApi.findAll(), []);
 
-  const all = markets.data?.content.filter((market) => market.active) ?? [];
+  const all = markets.items;
   const featured = all.find((market) => market.mainImage) ?? all[0];
   const rest = all.filter((market) => market.id !== featured?.id);
   const weekend = rest.filter(opensThisWeekend).slice(0, 6);
@@ -39,9 +47,16 @@ export default function DiscoverScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: theme.spacing.huge }}
+        onScroll={({ nativeEvent }) => {
+          const distanceToEnd =
+            nativeEvent.contentSize.height - nativeEvent.layoutMeasurement.height - nativeEvent.contentOffset.y;
+          // Tras un fallo no se reintenta solo al desplazarse: lo hace el botón del pie.
+          if (distanceToEnd < 600 && !markets.error) markets.loadMore();
+        }}
+        scrollEventThrottle={200}
         refreshControl={
           <RefreshControl
-            refreshing={markets.loading && markets.data !== null}
+            refreshing={markets.loading && markets.items.length > 0}
             onRefresh={markets.reload}
             tintColor={theme.colors.accent}
             colors={[theme.colors.accent]}
@@ -50,9 +65,9 @@ export default function DiscoverScreen() {
       >
         <Masthead onOpenNotifications={() => router.push("/perfil")} />
 
-        {markets.loading && !markets.data ? (
+        {markets.loading && markets.items.length === 0 ? (
           <DiscoverSkeleton />
-        ) : markets.error ? (
+        ) : markets.error && markets.items.length === 0 ? (
           <EmptyState
             icon="wifi-off"
             title="No hemos podido cargar los mercados"
@@ -129,6 +144,11 @@ export default function DiscoverScreen() {
                       <MarketListItem market={market} onPress={() => openMarket(market)} />
                     </View>
                   ))}
+                  <ListFooter
+                    loading={markets.loadingMore}
+                    failed={Boolean(markets.error)}
+                    onRetry={markets.loadMore}
+                  />
                 </View>
               </View>
             ) : null}

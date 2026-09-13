@@ -82,7 +82,7 @@ export default function ProfileScreen() {
             {user.role === "ADMIN" ? <Tag label="Admin" tone="accent" /> : null}
           </View>
 
-          <View style={{ marginTop: theme.spacing.xxl }}>
+          <MenuGroup title="Actividad">
             <MenuRow
               icon="map-pin"
               label="Sugerir un mercado"
@@ -94,12 +94,39 @@ export default function ProfileScreen() {
               label="Notificaciones"
               onPress={() => router.push("/notificaciones")}
             />
+          </MenuGroup>
+
+          <MenuGroup title="Cuenta">
+            <MenuRow icon="user" label="Datos personales" onPress={() => router.push("/cuenta/datos")} />
+            <Divider />
+            <MenuRow icon="lock" label="Cambiar contraseña" onPress={() => router.push("/cuenta/contrasena")} />
             <Divider />
             <MenuRow icon="log-out" label="Cerrar sesión" destructive onPress={confirmLogout} />
-          </View>
+          </MenuGroup>
+
+          <Pressable
+            onPress={() => router.push("/cuenta/eliminar")}
+            style={({ pressed }) => ({ alignSelf: "center", padding: theme.spacing.md, marginTop: theme.spacing.xl, opacity: pressed ? 0.6 : 1 })}
+          >
+            <Text variant="caption" color="inkFaint">
+              Eliminar mi cuenta
+            </Text>
+          </Pressable>
         </ScrollView>
       )}
     </Screen>
+  );
+}
+
+function MenuGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme();
+  return (
+    <View style={{ marginTop: theme.spacing.xxl }}>
+      <Text variant="overline" color="inkFaint" style={{ marginBottom: theme.spacing.xs }}>
+        {title}
+      </Text>
+      {children}
+    </View>
   );
 }
 

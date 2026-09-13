@@ -5,6 +5,20 @@ export function findAll(params?: PageParams): Promise<PageResponse<MarketRespons
   return request<PageResponse<MarketResponse>>("/api/markets", { params });
 }
 
+/** Solo mercados publicados, filtrando por texto (nombre, ciudad, provincia) y categoría. */
+export function search(
+  filters: { q?: string; categoryId?: number | null },
+  params?: PageParams
+): Promise<PageResponse<MarketResponse>> {
+  return request<PageResponse<MarketResponse>>("/api/markets/search", {
+    params: {
+      ...params,
+      q: filters.q?.trim() || undefined,
+      categoryId: filters.categoryId ?? undefined,
+    },
+  });
+}
+
 export function findById(id: number): Promise<MarketResponse> {
   return request<MarketResponse>(`/api/markets/${id}`);
 }

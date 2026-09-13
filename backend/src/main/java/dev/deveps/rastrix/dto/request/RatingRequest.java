@@ -3,6 +3,7 @@ package dev.deveps.rastrix.dto.request;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 public record RatingRequest(
 
@@ -17,6 +18,7 @@ public record RatingRequest(
         @Max(5)
         Integer score,
 
+        @Size(max = 1000)
         String comment
 
 ) {

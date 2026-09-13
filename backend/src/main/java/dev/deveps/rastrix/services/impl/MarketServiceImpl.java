@@ -107,6 +107,12 @@ public class MarketServiceImpl implements MarketService {
         return toPageResponse(marketRepository.searchForAdmin(active, normalize(query), pageable));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<MarketResponse> search(String query, Long categoryId, Pageable pageable) {
+        return toPageResponse(marketRepository.searchPublished(normalize(query), categoryId, pageable));
+    }
+
     private Market findEntityById(Long id) {
         return marketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe ningún mercado con id: " + id));

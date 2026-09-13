@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -50,9 +51,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
-        } catch (JwtException | IllegalArgumentException ex) {
-            // Token inválido, malformado o expirado: la petición sigue sin autenticar
-            // y será la regla de autorización correspondiente la que la rechace.
+        } catch (JwtException | IllegalArgumentException | UsernameNotFoundException ex) {
+            // Token inválido, malformado o expirado, o emitido para un email que ya no
+            // existe (el usuario lo ha cambiado o ha borrado la cuenta): la petición
+            // sigue sin autenticar y se responde 401, de modo que la app renueva el
+            // token con el refresh token, que va por id y no por email.
         }
 
         filterChain.doFilter(request, response);

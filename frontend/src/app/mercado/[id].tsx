@@ -14,14 +14,14 @@ import { RatingStars } from "@/components/ui/RatingStars";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Tag } from "@/components/ui/Tag";
 import { Text } from "@/components/ui/Text";
-import { formatFullAddress, formatLocation, formatSchedule, formatTimeRange } from "@/lib/format";
+import { formatFullAddress, formatRelativeDate, formatLocation, formatSchedule, formatTimeRange } from "@/lib/format";
 import { useAsync } from "@/lib/useAsync";
 import { useTheme, type Theme } from "@/theme";
-import type { MarketResponse } from "@/types/dto";
+import type { MarketResponse, RatingResponse } from "@/types/dto";
 import Feather from "@expo/vector-icons/Feather";
 import { LinearGradient } from "expo-linear-gradient";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import Animated, {
   Extrapolation,
@@ -43,6 +43,19 @@ export default function MarketDetailScreen() {
 
   const market = useAsync(() => marketsApi.findById(marketId), [marketId]);
   const ratings = useAsync(() => ratingsApi.findByMarketId(marketId), [marketId]);
+
+  // Al volver de valorar hay que ver la valoración nueva sin recargar a mano.
+  const reloadRatings = ratings.reload;
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      reloadRatings();
+    }, [reloadRatings])
+  );
   const exhibitors = useAsync(() => exhibitorsApi.findByMarketId(marketId), [marketId]);
   const images = useAsync(() => marketImagesApi.findByMarketId(marketId), [marketId]);
   const marketCategories = useAsync(() => marketCategoriesApi.findByMarketId(marketId), [marketId]);
@@ -194,26 +207,11 @@ export default function MarketDetailScreen() {
             </Section>
           ) : null}
 
-          <Section title={`Valoraciones${scores.length ? ` (${scores.length})` : ""}`}>
-            {ratings.data && ratings.data.length > 0 ? (
-              <View style={{ gap: theme.spacing.lg }}>
-                {ratings.data.slice(0, 5).map((rating) => (
-                  <View key={rating.id} style={{ gap: 6 }}>
-                    <RatingStars value={rating.score} showValue={false} size={13} />
-                    {rating.comment ? (
-                      <Text variant="body" color="inkMuted">
-                        {rating.comment}
-                      </Text>
-                    ) : null}
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text variant="body" color="inkFaint">
-                Este mercado todavía no tiene valoraciones.
-              </Text>
-            )}
-          </Section>
+          <RatingsSection
+            marketId={marketId}
+            ratings={ratings.data ?? []}
+            average={average}
+          />
 
           <ContactBlock market={data} />
         </View>
@@ -312,6 +310,138 @@ function FavoriteButton({ marketId }: { marketId: number }) {
       accessibilityLabel={favorite ? "Quitar de favoritos" : "Guardar en favoritos"}
       onPress={busy ? undefined : toggle}
     />
+  );
+}
+
+const VISIBLE_RATINGS = 5;
+
+function RatingsSection({
+  marketId,
+  ratings,
+  average,
+}: {
+  marketId: number;
+  ratings: RatingResponse[];
+  average: number | null;
+}) {
+  const theme = useTheme();
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
+  const [expanded, setExpanded] = useState(false);
+
+  const mine = user ? ratings.find((rating) => rating.userId === user.id) : undefined;
+  const others = ratings.filter((rating) => rating !== mine);
+  const visible = expanded ? others : others.slice(0, VISIBLE_RATINGS);
+
+  const rate = () => {
+    if (!isAuthenticated) {
+      Alert.alert("Inicia sesión", "Crea una cuenta gratuita para valorar los mercados que visitas.", [
+        { text: "Ahora no", style: "cancel" },
+        { text: "Iniciar sesión", onPress: () => router.push("/acceso") },
+      ]);
+      return;
+    }
+    router.push(`/valorar/${marketId}`);
+  };
+
+  return (
+    <Section title={`Valoraciones${ratings.length ? ` (${ratings.length})` : ""}`}>
+      {average !== null ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
+          <Text variant="display">{average.toFixed(1).replace(".", ",")}</Text>
+          <View style={{ gap: 4 }}>
+            <RatingStars value={average} showValue={false} size={16} />
+            <Text variant="caption" color="inkMuted">
+              {ratings.length} {ratings.length === 1 ? "valoración" : "valoraciones"}
+            </Text>
+          </View>
+        </View>
+      ) : null}
+
+      {mine ? (
+        <View
+          style={{
+            gap: theme.spacing.sm,
+            padding: theme.spacing.lg,
+            borderRadius: theme.radius.lg,
+            backgroundColor: theme.colors.accentSoft,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text variant="overline" color="accent">
+              Tu valoración
+            </Text>
+            <Pressable onPress={rate} hitSlop={8} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+              <Text variant="captionMedium" color="accent">
+                Editar
+              </Text>
+            </Pressable>
+          </View>
+          <RatingStars value={mine.score} showValue={false} size={15} />
+          {mine.comment ? (
+            <Text variant="body" color="inkMuted">
+              {mine.comment}
+            </Text>
+          ) : null}
+        </View>
+      ) : (
+        <Pressable
+          onPress={rate}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            gap: theme.spacing.md,
+            padding: theme.spacing.lg,
+            borderRadius: theme.radius.lg,
+            borderWidth: 1,
+            borderStyle: "dashed",
+            borderColor: theme.colors.borderStrong,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Feather name="star" size={18} color={theme.colors.brass} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="bodyMedium">¿Has estado? Valóralo</Text>
+            <Text variant="caption" color="inkMuted">
+              {ratings.length === 0 ? "Sé la primera persona en contar qué tal." : "Ayuda a quien va por primera vez."}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={theme.colors.inkFaint} />
+        </Pressable>
+      )}
+
+      {visible.length > 0 ? (
+        <View style={{ gap: theme.spacing.lg, marginTop: theme.spacing.sm }}>
+          {visible.map((rating, index) => (
+            <View key={rating.id} style={{ gap: 6 }}>
+              {index > 0 ? <Divider style={{ marginBottom: theme.spacing.md }} /> : null}
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text variant="bodyMedium" numberOfLines={1} style={{ flex: 1 }}>
+                  {rating.userName ?? "Usuario de Rastrix"}
+                </Text>
+                <Text variant="caption" color="inkFaint">
+                  {formatRelativeDate(rating.fechaCreacion)}
+                </Text>
+              </View>
+              <RatingStars value={rating.score} showValue={false} size={13} />
+              {rating.comment ? (
+                <Text variant="body" color="inkMuted">
+                  {rating.comment}
+                </Text>
+              ) : null}
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {others.length > VISIBLE_RATINGS ? (
+        <Pressable onPress={() => setExpanded(!expanded)} hitSlop={8} style={{ alignSelf: "flex-start" }}>
+          <Text variant="captionMedium" color="accent">
+            {expanded ? "Ver menos" : `Ver las ${others.length} valoraciones`}
+          </Text>
+        </Pressable>
+      ) : null}
+    </Section>
   );
 }
 

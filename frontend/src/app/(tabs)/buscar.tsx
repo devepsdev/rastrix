@@ -1,4 +1,3 @@
-import * as marketCategoriesApi from "@/api/marketCategories";
 import * as categoriesApi from "@/api/categories";
 import * as marketsApi from "@/api/markets";
 import { CategoryChip } from "@/components/CategoryChip";
@@ -9,11 +8,16 @@ import { Input } from "@/components/ui/Input";
 import { Screen } from "@/components/ui/Screen";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Text } from "@/components/ui/Text";
+import { ListFooter } from "@/components/ListFooter";
 import { useAsync } from "@/lib/useAsync";
+import { useDebounced } from "@/lib/useDebounced";
+import { usePagedList } from "@/lib/usePagedList";
 import { useTheme } from "@/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { FlatList, ScrollView, View } from "react-native";
+
+const PAGE_SIZE = 20;
 
 export default function SearchScreen() {
   const theme = useTheme();
@@ -25,31 +29,23 @@ export default function SearchScreen() {
     params.categoria ? Number(params.categoria) : null
   );
 
-  const markets = useAsync(() => marketsApi.findAll({ size: 100 }), []);
-  const categories = useAsync(() => categoriesApi.findAll(), []);
-  const categoryLinks = useAsync(
-    () =>
-      categoryId === null
-        ? Promise.resolve(null)
-        : marketCategoriesApi.findByCategoryId(categoryId),
-    [categoryId]
+  // La pestaña sigue montada al volver desde una categoría de Descubrir: hay que
+  // aplicar la nueva categoría aunque el estado ya estuviera inicializado.
+  const [categoryParam, setCategoryParam] = useState(params.categoria);
+  if (params.categoria !== categoryParam) {
+    setCategoryParam(params.categoria);
+    setCategoryId(params.categoria ? Number(params.categoria) : null);
+  }
+
+  // Se busca en el servidor, así que se espera a que el usuario deje de escribir.
+  const debouncedQuery = useDebounced(query.trim(), 300);
+
+  const markets = usePagedList(
+    (page) =>
+      marketsApi.search({ q: debouncedQuery, categoryId }, { page, size: PAGE_SIZE, sort: "name,asc" }),
+    [debouncedQuery, categoryId]
   );
-
-  const allowedIds = categoryLinks.data
-    ? new Set(categoryLinks.data.map((link) => link.marketId))
-    : null;
-
-  const normalized = query.trim().toLowerCase();
-  const results = (markets.data?.content ?? [])
-    .filter((market) => market.active)
-    .filter((market) => (allowedIds ? allowedIds.has(market.id) : true))
-    .filter((market) =>
-      normalized.length === 0
-        ? true
-        : [market.name, market.city, market.province]
-            .filter(Boolean)
-            .some((field) => field!.toLowerCase().includes(normalized))
-    );
+  const categories = useAsync(() => categoriesApi.findAll(), []);
 
   return (
     <Screen>
@@ -91,52 +87,62 @@ export default function SearchScreen() {
         ))}
       </ScrollView>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{
-          paddingHorizontal: theme.screenPadding,
-          paddingBottom: theme.spacing.huge,
-        }}
-      >
-        {markets.loading && !markets.data ? (
-          <View style={{ gap: theme.spacing.xl, paddingTop: theme.spacing.sm }}>
-            {[0, 1, 2, 3].map((key) => (
-              <View key={key} style={{ flexDirection: "row", gap: theme.spacing.lg }}>
-                <Skeleton width={88} height={88} radius={theme.radius.md} />
-                <View style={{ flex: 1, gap: theme.spacing.sm, justifyContent: "center" }}>
-                  <Skeleton width={70} height={10} />
-                  <Skeleton width="80%" height={17} />
-                  <Skeleton width="55%" height={13} />
-                </View>
+      {markets.loading && markets.items.length === 0 ? (
+        <View style={{ gap: theme.spacing.xl, paddingTop: theme.spacing.sm, paddingHorizontal: theme.screenPadding }}>
+          {[0, 1, 2, 3].map((key) => (
+            <View key={key} style={{ flexDirection: "row", gap: theme.spacing.lg }}>
+              <Skeleton width={88} height={88} radius={theme.radius.md} />
+              <View style={{ flex: 1, gap: theme.spacing.sm, justifyContent: "center" }}>
+                <Skeleton width={70} height={10} />
+                <Skeleton width="80%" height={17} />
+                <Skeleton width="55%" height={13} />
               </View>
-            ))}
-          </View>
-        ) : results.length === 0 ? (
-          <EmptyState
-            icon="search"
-            title="Sin resultados"
-            message="Prueba con otro término. Y si conoces un mercado que no está, cuéntanoslo."
-            actionLabel="Sugerir un mercado"
-            onAction={() => router.push("/sugerir")}
-          />
-        ) : (
-          <>
+            </View>
+          ))}
+        </View>
+      ) : markets.error && markets.items.length === 0 ? (
+        <EmptyState
+          icon="wifi-off"
+          title="No hemos podido buscar"
+          message="Comprueba tu conexión e inténtalo de nuevo."
+          actionLabel="Reintentar"
+          onAction={markets.reload}
+        />
+      ) : markets.items.length === 0 ? (
+        <EmptyState
+          icon="search"
+          title="Sin resultados"
+          message="Prueba con otro término. Y si conoces un mercado que no está, cuéntanoslo."
+          actionLabel="Sugerir un mercado"
+          onAction={() => router.push("/sugerir")}
+        />
+      ) : (
+        <FlatList
+          data={markets.items}
+          keyExtractor={(market) => String(market.id)}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          contentContainerStyle={{
+            paddingHorizontal: theme.screenPadding,
+            paddingBottom: theme.spacing.huge,
+          }}
+          ListHeaderComponent={
             <Text variant="overline" color="inkFaint" style={{ marginBottom: theme.spacing.sm }}>
-              {results.length} {results.length === 1 ? "mercado" : "mercados"}
+              {markets.total} {markets.total === 1 ? "mercado" : "mercados"}
             </Text>
-            {results.map((market, index) => (
-              <View key={market.id}>
-                {index > 0 ? <Divider /> : null}
-                <MarketListItem
-                  market={market}
-                  onPress={() => router.push(`/mercado/${market.id}`)}
-                />
-              </View>
-            ))}
-          </>
-        )}
-      </ScrollView>
+          }
+          ItemSeparatorComponent={Divider}
+          renderItem={({ item: market }) => (
+            <MarketListItem market={market} onPress={() => router.push(`/mercado/${market.id}`)} />
+          )}
+          onEndReached={markets.loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            <ListFooter loading={markets.loadingMore} failed={Boolean(markets.error)} onRetry={markets.loadMore} />
+          }
+        />
+      )}
     </Screen>
   );
 }
