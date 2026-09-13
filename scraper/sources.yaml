@@ -1,22 +1,95 @@
 # Páginas que el scraper revisa en cada pasada.
 #
 # Cada fuente es una página donde se anuncian mercados de antigüedades,
-# almonedas, rastros o ferias de coleccionismo: webs de ayuntamientos, agendas
-# culturales, webs de los propios organizadores...
+# almonedas, rastros o ferias de coleccionismo.
 #
 # Campos:
 #   nombre     Nombre corto para los logs.
 #   url        Página a descargar.
 #   provincia  Opcional. Se usa si la página no indica la provincia.
-#   ciudad     Opcional. Se usa si la página no indica la ciudad (útil cuando
-#              la fuente es de un solo municipio).
+#   ciudad     Opcional. Se usa si la página no indica la ciudad.
 #
 # Si una página no cambia de una pasada a otra, no se vuelve a analizar.
 #
-# Ejemplo:
-#   - nombre: Rastro municipal de Ejemplo
-#     url: https://www.ejemplo.es/cultura/rastro
-#     provincia: Madrid
-#     ciudad: Ejemplo
+# Todas se comprobaron el 2026-09-13: responden, robots.txt permite leerlas y
+# su texto habla de antigüedades. Se descartaron por robots.txt la agenda propia
+# del Mercat Gòtic y El Troc; por cargar el contenido con JavaScript (el scraper
+# no ejecuta JavaScript) las páginas de Pontevedra y El Vendrell.
 
-sources: []
+sources:
+  # ---------------------------------------------------------------- oficiales
+  - nombre: Barcelona · Mercat Gòtic d'Antiguitats
+    url: https://guia.barcelona.cat/detall/fira-de-brocanters-mercat-gotic-d-antiguitats-setmanal-a-la-placa-de-la-catedral_99400322732.html
+    provincia: Barcelona
+    ciudad: Barcelona
+
+  - nombre: Barcelona · Mercado Dominical de Sant Antoni
+    url: https://guia.barcelona.cat/es/detall/mercat-dominical-de-sant-antoni_99400322549.html
+    provincia: Barcelona
+    ciudad: Barcelona
+
+  - nombre: Vilafranca del Penedès · Mercat de brocanters
+    url: https://www.vilafranca.cat/agenda/mercat-de-brocanters
+    provincia: Barcelona
+    ciudad: Vilafranca del Penedès
+
+  - nombre: Mollerussa · Fira d'antiquaris i brocanters
+    url: https://www.mollerussa.cat/la-5a-fira-mercat-dantiquaris-i-brocanters-de-mollerussa-es-consolida-i-comptara-amb-34-expositors/
+    provincia: Lleida
+    ciudad: Mollerussa
+
+  - nombre: El Astillero · Mercado de antigüedades
+    url: https://www.astillero.es/content/astillero-albergar%C3%A1-un-mercado-de-antig%C3%BCedades-cada-primer-domingo-del-mes
+    provincia: Cantabria
+    ciudad: El Astillero
+
+  - nombre: Ourense · Mercado de antigüedades
+    url: https://www.cultura.gal/es/evento/39335/107/44016
+    provincia: Ourense
+    ciudad: Ourense
+
+  - nombre: Madrid · Feriarte (IFEMA)
+    url: https://www.ifema.es/feriarte
+    provincia: Madrid
+    ciudad: Madrid
+
+  - nombre: Granada · Mercadillo dominical de coleccionismo
+    url: https://fesofi.es/noticias/el-mercadillo-dominical-de-coleccionismo-de-granada/
+    provincia: Granada
+    ciudad: Granada
+
+  # ---------------------------------------------------------------- prensa
+  - nombre: Navacerrada · Rastro de antigüedades (Guía del Ocio)
+    url: https://guiadelocio.es/madrid/plan/mercadillo-de-navacerrada-el-rastro-de-antiguedades-de-la-sierra-de-madrid/
+    provincia: Madrid
+    ciudad: Navacerrada
+
+  - nombre: Madrid · Sábados del Rastro
+    url: https://quehacerhoyenmadrid.com/sabados-del-rastro/
+    provincia: Madrid
+    ciudad: Madrid
+
+  # ---------------------------------------------------------------- directorios
+  # Listan muchos mercados por página, así que rinden mucho más, pero son bases
+  # de datos elaboradas por terceros: en la UE extraer de forma sistemática una
+  # parte sustancial de ellas está protegido aunque cada dato suelto sea público.
+  # Desactivados hasta decidir si se usan; se pueden usar también solo como
+  # pista para buscar la fuente oficial de cada mercado.
+  #
+  # - nombre: Directorio · El Paraíso del Coleccionista (Comunidad de Madrid)
+  #   url: https://www.elparaisodelcoleccionista.com/mercadillos-de-coleccionismo/mercadillos-y-rastros-de-antiguedades-en-la-comunidad-de-madrid/
+  #   provincia: Madrid
+  #
+  # - nombre: Directorio · El Paraíso del Coleccionista (Andalucía)
+  #   url: https://www.elparaisodelcoleccionista.com/mercadillos-de-coleccionismo/mercadillos-y-rastros-de-antiguedades-en-andalucia/
+  #
+  # - nombre: Directorio · Mercadillo Semanal (Madrid)
+  #   url: https://www.mercadillosemanal.com/mercadillos-de-antiguedades.en.madrid
+  #   provincia: Madrid
+  #
+  # - nombre: Directorio · Antiga, ferias de antigüedades 2026
+  #   url: https://antiga.es/journal/ferias-antiguedades-espana-2026
+  #
+  # - nombre: Directorio · Mercados de antigüedades en Barcelona 2026
+  #   url: https://antiguedadescastillejosbarcelona.com/mercados-de-antiguedades-en-barcelona-y-alrededores-2026/
+  #   provincia: Barcelona
