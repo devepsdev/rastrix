@@ -10,6 +10,10 @@ class RetryableError(Exception):
     """Fallo pasajero: saturación, error del servidor o respuesta vacía."""
 
 
+class TruncatedResponseError(Exception):
+    """La respuesta no cabe en el límite de tokens. Repetir la misma petición daría lo mismo."""
+
+
 class DeepSeekClient:
     def __init__(self, api_key: str, model: str, session: requests.Session | None = None):
         self.api_key = api_key
@@ -22,7 +26,7 @@ class DeepSeekClient:
         wait=wait_exponential(multiplier=2, min=4, max=30),
         reraise=True,
     )
-    def complete_json(self, messages: list[dict], max_tokens: int = 4000) -> dict:
+    def complete_json(self, messages: list[dict], max_tokens: int = 8000) -> dict:
         """Pide una respuesta en modo JSON y la devuelve ya parseada."""
         response = self.session.post(
             API_URL,
@@ -30,6 +34,11 @@ class DeepSeekClient:
             json={
                 "model": self.model,
                 "messages": messages,
+                # Los modelos actuales razonan antes de responder si no se indica lo
+                # contrario. Para extraer datos de un texto no aporta nada: gasta
+                # tokens, tarda más, ignora la temperatura y en páginas largas llegó a
+                # agotar el límite razonando sin llegar a escribir la respuesta.
+                "thinking": {"type": "disabled"},
                 "temperature": 0.1,
                 "max_tokens": max_tokens,
                 "response_format": {"type": "json_object"},
@@ -40,7 +49,11 @@ class DeepSeekClient:
             raise RetryableError(f"DeepSeek respondió {response.status_code}")
         response.raise_for_status()
 
-        content = response.json()["choices"][0]["message"]["content"]
+        choice = response.json()["choices"][0]
+        if choice.get("finish_reason") == "length":
+            raise TruncatedResponseError(
+                f"la respuesta no cabe en {max_tokens} tokens: la página anuncia demasiados mercados para una sola llamada")
+        content = choice["message"].get("content")
         # La documentación de DeepSeek avisa de que el modo JSON a veces devuelve vacío.
         if not content or not content.strip():
             raise RetryableError("DeepSeek devolvió una respuesta vacía")

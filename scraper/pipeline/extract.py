@@ -37,7 +37,8 @@ LIMITS = {"name": 150, "city": 100, "province": 100, "address": 255, "descriptio
 def extract_markets(page_text: str, source: dict, client, today: date | None = None) -> list[dict]:
     """Pide a DeepSeek los mercados de la página y devuelve solo los que pasan la validación."""
     hints = ", ".join(f"{key}: {source[key]}" for key in ("provincia", "ciudad") if source.get(key))
-    user_prompt = f"Página: {source['url']}\n" + (f"Contexto de la fuente: {hints}\n" if hints else "")
+    user_prompt = f"Página: {source['url']}\n" + (
+        f"Si la página trata de un único mercado y no indica dónde se celebra, está en: {hints}.\n" if hints else "")
     data = client.complete_json([
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt + "\nTexto de la página:\n" + page_text},
@@ -48,9 +49,15 @@ def extract_markets(page_text: str, source: dict, client, today: date | None = N
         logger.warning("Respuesta de DeepSeek sin lista de mercados; se ignora")
         return []
 
+    # La ciudad y la provincia de sources.yaml describen el mercado de una página
+    # dedicada a uno solo. En un listado de varios, aplicarlas pondría esa ciudad a
+    # mercados de otros sitios que la página no localiza.
+    entries = [raw for raw in raw_markets if isinstance(raw, dict)]
+    location_hints = source if len(entries) == 1 else {k: v for k, v in source.items() if k not in ("ciudad", "provincia")}
+
     markets = []
-    for raw in raw_markets:
-        market = normalize_market(raw, source, today or date.today())
+    for raw in entries:
+        market = normalize_market(raw, location_hints, today or date.today())
         if market is not None:
             markets.append(market)
     return markets

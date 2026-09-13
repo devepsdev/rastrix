@@ -95,3 +95,24 @@ def test_extract_markets_filters_the_model_response():
 def test_extract_markets_survives_an_unexpected_shape():
     assert extract_markets("texto", SOURCE, FakeClient({"otra": 1}), today=TODAY) == []
     assert extract_markets("texto", SOURCE, FakeClient([]), today=TODAY) == []
+
+
+def test_source_location_fills_a_single_market_page():
+    client = FakeClient({"markets": [{"name": "Rastro de Vic"}]})
+    markets = extract_markets("texto", {**SOURCE, "ciudad": "Vic", "provincia": "Barcelona"}, client, today=TODAY)
+
+    assert markets[0]["city"] == "Vic"
+    assert markets[0]["province"] == "Barcelona"
+
+
+def test_source_location_is_not_spread_over_a_listing():
+    # Un listado regional: la ciudad de la fuente no es la de todos los mercados.
+    client = FakeClient({"markets": [
+        {"name": "Mercadillo de Granada", "city": "Granada"},
+        {"name": "Rastro del Sur"},
+        {"name": "Rastro de Motril", "city": "Motril"},
+    ]})
+    markets = extract_markets("texto", {**SOURCE, "ciudad": "Granada", "provincia": "Granada"}, client, today=TODAY)
+
+    assert [m["name"] for m in markets] == ["Mercadillo de Granada", "Rastro de Motril"]
+    assert all(m["province"] is None for m in markets)
