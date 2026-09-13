@@ -33,10 +33,10 @@
                 </div>
               </td>
               <td class="px-5 py-3">
-                @if (user.role === 'ADMIN') {
-                  <span class="badge bg-accent-soft text-accent">Admin</span>
-                } @else {
-                  <span class="badge bg-sunken text-ink-muted">Usuario</span>
+                @switch (user.role) {
+                  @case ('ADMIN') { <span class="badge bg-accent-soft text-accent">Admin</span> }
+                  @case ('SCRAPER') { <span class="badge bg-support-soft text-support">Scraper</span> }
+                  @default { <span class="badge bg-sunken text-ink-muted">Usuario</span> }
                 }
               </td>
               <td class="hidden px-5 py-3 text-ink-muted md:table-cell">{{ user.fechaCreacion | date: 'd MMM y' }}</td>
@@ -44,9 +44,16 @@
                 <!-- Nadie puede quitarse a sí mismo los permisos ni borrar su propia cuenta desde aquí. -->
                 @if (user.id !== auth.user()?.id) {
                   <div class="flex justify-end gap-2">
-                    <button type="button" class="btn btn-secondary btn-sm" [disabled]="busyId() === user.id" (click)="toggleRole(user)">
-                      {{ user.role === 'ADMIN' ? 'Quitar admin' : 'Hacer admin' }}
-                    </button>
+                    <select
+                      class="input h-8 w-36 text-xs"
+                      aria-label="Rol"
+                      [disabled]="busyId() === user.id"
+                      (change)="changeRole(user, $any($event.target))"
+                    >
+                      @for (option of roles; track option.value) {
+                        <option [value]="option.value" [selected]="option.value === user.role">{{ option.label }}</option>
+                      }
+                    </select>
                     <button type="button" class="btn btn-danger btn-sm" [disabled]="busyId() === user.id" (click)="remove(user)">Eliminar</button>
                   </div>
                 }

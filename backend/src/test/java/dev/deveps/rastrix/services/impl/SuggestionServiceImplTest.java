@@ -2,8 +2,12 @@ package dev.deveps.rastrix.services.impl;
 
 import dev.deveps.rastrix.dto.request.SuggestionRequest;
 import dev.deveps.rastrix.dto.response.SuggestionResponse;
+import dev.deveps.rastrix.entities.Market;
+import dev.deveps.rastrix.entities.Role;
 import dev.deveps.rastrix.entities.Suggestion;
+import dev.deveps.rastrix.entities.SuggestionOrigin;
 import dev.deveps.rastrix.entities.SuggestionStatus;
+import dev.deveps.rastrix.exception.DuplicateResourceException;
 import dev.deveps.rastrix.exception.InvalidDataException;
 import dev.deveps.rastrix.exception.ResourceNotFoundException;
 import dev.deveps.rastrix.repositories.MarketRepository;
@@ -41,7 +45,8 @@ class SuggestionServiceImplTest {
 
     private static SuggestionRequest request() {
         return new SuggestionRequest("Rastro de Cuenca", "Cuenca", null, null, "mensual", "sabado",
-                null, null, null, null, "Cada primer sábado", "600 000 000", null);
+                null, null, null, null, "Cada primer sábado", "600 000 000", null,
+                "https://ejemplo.test/mercados");
     }
 
     private static Suggestion suggestion(SuggestionStatus status) {
@@ -60,7 +65,7 @@ class SuggestionServiceImplTest {
         when(suggestionRepository.countByUserIdAndStatus(5L, SuggestionStatus.PENDIENTE)).thenReturn(0L);
         when(suggestionRepository.save(any(Suggestion.class))).thenAnswer(call -> call.getArgument(0));
 
-        SuggestionResponse response = suggestionService.create(5L, request());
+        SuggestionResponse response = suggestionService.create(5L, Role.USER, request());
 
         assertThat(response.status()).isEqualTo(SuggestionStatus.PENDIENTE);
         assertThat(response.userId()).isEqualTo(5L);
@@ -71,7 +76,7 @@ class SuggestionServiceImplTest {
         when(suggestionRepository.countByUserIdAndStatus(5L, SuggestionStatus.PENDIENTE))
                 .thenReturn((long) SuggestionServiceImpl.MAX_PENDING_PER_USER);
 
-        assertThatThrownBy(() -> suggestionService.create(5L, request()))
+        assertThatThrownBy(() -> suggestionService.create(5L, Role.USER, request()))
                 .isInstanceOf(InvalidDataException.class);
 
         verify(suggestionRepository, never()).save(any());
@@ -118,5 +123,65 @@ class SuggestionServiceImplTest {
 
         assertThat(response.status()).isEqualTo(SuggestionStatus.RECHAZADA);
         assertThat(response.rejectionReason()).isEqualTo("Ya existe en el catálogo");
+    }
+
+    @Test
+    void userSuggestionIgnoresSourceUrlAndIsMarkedAsUser() {
+        when(suggestionRepository.countByUserIdAndStatus(5L, SuggestionStatus.PENDIENTE)).thenReturn(0L);
+        when(suggestionRepository.save(any(Suggestion.class))).thenAnswer(call -> call.getArgument(0));
+
+        SuggestionResponse response = suggestionService.create(5L, Role.USER, request());
+
+        assertThat(response.origin()).isEqualTo(SuggestionOrigin.USUARIO);
+        assertThat(response.sourceUrl()).isNull();
+    }
+
+    @Test
+    void scraperSuggestionKeepsSourceUrlAndSkipsTheUserCap() {
+        when(suggestionRepository.countByUserIdAndStatus(9L, SuggestionStatus.PENDIENTE))
+                .thenReturn((long) SuggestionServiceImpl.MAX_PENDING_PER_USER + 50);
+        when(marketRepository.findByNameAndCity("Rastro de Cuenca", "Cuenca")).thenReturn(Optional.empty());
+        when(suggestionRepository.existsByOriginAndNameAndCity(SuggestionOrigin.SCRAPER, "Rastro de Cuenca", "Cuenca"))
+                .thenReturn(false);
+        when(suggestionRepository.save(any(Suggestion.class))).thenAnswer(call -> call.getArgument(0));
+
+        SuggestionResponse response = suggestionService.create(9L, Role.SCRAPER, request());
+
+        assertThat(response.origin()).isEqualTo(SuggestionOrigin.SCRAPER);
+        assertThat(response.sourceUrl()).isEqualTo("https://ejemplo.test/mercados");
+    }
+
+    @Test
+    void scraperDoesNotSuggestMarketsAlreadyInTheCatalog() {
+        when(suggestionRepository.countByUserIdAndStatus(9L, SuggestionStatus.PENDIENTE)).thenReturn(0L);
+        when(marketRepository.findByNameAndCity("Rastro de Cuenca", "Cuenca")).thenReturn(Optional.of(new Market()));
+
+        assertThatThrownBy(() -> suggestionService.create(9L, Role.SCRAPER, request()))
+                .isInstanceOf(DuplicateResourceException.class);
+
+        verify(suggestionRepository, never()).save(any());
+    }
+
+    /** Lo rechazado no vuelve a la bandeja en la siguiente pasada. */
+    @Test
+    void scraperDoesNotRepeatAPreviousSuggestion() {
+        when(suggestionRepository.countByUserIdAndStatus(9L, SuggestionStatus.PENDIENTE)).thenReturn(0L);
+        when(marketRepository.findByNameAndCity("Rastro de Cuenca", "Cuenca")).thenReturn(Optional.empty());
+        when(suggestionRepository.existsByOriginAndNameAndCity(SuggestionOrigin.SCRAPER, "Rastro de Cuenca", "Cuenca"))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> suggestionService.create(9L, Role.SCRAPER, request()))
+                .isInstanceOf(DuplicateResourceException.class);
+
+        verify(suggestionRepository, never()).save(any());
+    }
+
+    @Test
+    void scraperHasItsOwnSafetyCap() {
+        when(suggestionRepository.countByUserIdAndStatus(9L, SuggestionStatus.PENDIENTE))
+                .thenReturn((long) SuggestionServiceImpl.MAX_PENDING_FOR_SCRAPER);
+
+        assertThatThrownBy(() -> suggestionService.create(9L, Role.SCRAPER, request()))
+                .isInstanceOf(InvalidDataException.class);
     }
 }

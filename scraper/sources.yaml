@@ -1,0 +1,22 @@
+# Páginas que el scraper revisa en cada pasada.
+#
+# Cada fuente es una página donde se anuncian mercados de antigüedades,
+# almonedas, rastros o ferias de coleccionismo: webs de ayuntamientos, agendas
+# culturales, webs de los propios organizadores...
+#
+# Campos:
+#   nombre     Nombre corto para los logs.
+#   url        Página a descargar.
+#   provincia  Opcional. Se usa si la página no indica la provincia.
+#   ciudad     Opcional. Se usa si la página no indica la ciudad (útil cuando
+#              la fuente es de un solo municipio).
+#
+# Si una página no cambia de una pasada a otra, no se vuelve a analizar.
+#
+# Ejemplo:
+#   - nombre: Rastro municipal de Ejemplo
+#     url: https://www.ejemplo.es/cultura/rastro
+#     provincia: Madrid
+#     ciudad: Ejemplo
+
+sources: []

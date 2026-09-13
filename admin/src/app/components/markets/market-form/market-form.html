@@ -17,7 +17,7 @@
 } @else {
   @if (suggestion(); as s) {
     <section class="mt-8 rounded-2xl border border-brass/30 bg-brass/5 p-5">
-      <p class="eyebrow text-brass">Sugerencia de {{ s.userName ?? 'un usuario' }}</p>
+      <p class="eyebrow text-brass">{{ s.origin === 'SCRAPER' ? 'Sugerencia del scraper' : 'Sugerencia de ' + (s.userName ?? 'un usuario') }}</p>
       @if (s.status !== 'PENDIENTE') {
         <p class="mt-2 text-sm text-danger">Esta sugerencia ya está resuelta ({{ s.status.toLowerCase() }}); guardar no la modificará.</p>
       } @else {
@@ -27,7 +27,9 @@
         @if (s.contact) {
           <div><dt class="label">Contacto que aporta</dt><dd>{{ s.contact }}</dd></div>
         }
-        @if (s.userEmail) {
+        @if (s.sourceUrl) {
+          <div class="sm:col-span-2"><dt class="label">Fuente</dt><dd class="truncate"><a [href]="s.sourceUrl" target="_blank" rel="noopener noreferrer" class="text-accent hover:underline">{{ s.sourceUrl }}</a></dd></div>
+        } @else if (s.userEmail) {
           <div><dt class="label">Correo del usuario</dt><dd>{{ s.userEmail }}</dd></div>
         }
         @if (s.comment) {

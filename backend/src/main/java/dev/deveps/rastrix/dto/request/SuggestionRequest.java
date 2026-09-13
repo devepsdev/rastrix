@@ -44,7 +44,11 @@ public record SuggestionRequest(
         String contact,
 
         @Size(max = 1000)
-        String comment
+        String comment,
+
+        /** Solo se tiene en cuenta si la envía la cuenta del scraper. */
+        @Size(max = 500)
+        String sourceUrl
 
 ) {
 }

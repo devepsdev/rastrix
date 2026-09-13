@@ -29,7 +29,7 @@ public class SuggestionController {
     public ResponseEntity<SuggestionResponse> create(
             @Valid @RequestBody SuggestionRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(suggestionService.create(principal.getId(), request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(suggestionService.create(principal.getId(), principal.getRole(), request));
     }
 
     @GetMapping("/me")

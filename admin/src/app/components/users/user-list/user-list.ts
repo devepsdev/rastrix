@@ -1,6 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
-import { PageResponse, UserResponse } from '../../../models/api.model';
+import { PageResponse, Role, UserResponse } from '../../../models/api.model';
 import { toApiProblem } from '../../../services/api-error';
 import { AuthService } from '../../../services/auth';
 import { ConfirmService } from '../../../services/confirm';
@@ -23,6 +23,12 @@ export class UserList {
   private stats = inject(StatsService);
   protected readonly auth = inject(AuthService);
 
+  protected readonly roles: { value: Role; label: string }[] = [
+    { value: 'USER', label: 'Usuario' },
+    { value: 'ADMIN', label: 'Administrador' },
+    { value: 'SCRAPER', label: 'Scraper' },
+  ];
+
   protected readonly result = signal<PageResponse<UserResponse> | null>(null);
   protected readonly loading = signal(true);
   protected readonly busyId = signal<number | null>(null);
@@ -37,27 +43,37 @@ export class UserList {
     this.load();
   }
 
-  protected async toggleRole(user: UserResponse): Promise<void> {
-    const promote = user.role !== 'ADMIN';
+  protected async changeRole(user: UserResponse, select: HTMLSelectElement): Promise<void> {
+    const role = select.value as Role;
+    if (role === user.role) return;
+
+    const consequences: Record<Role, string> = {
+      ADMIN: `${user.name} podrá entrar en este panel y crear, editar, ocultar y borrar cualquier contenido.`,
+      USER: `${user.name} pasará a ser un usuario normal de la app, sin acceso a este panel.`,
+      SCRAPER: `${user.name} pasará a ser la cuenta del scraper automático: sus sugerencias se marcarán como automáticas y no tendrán el tope de los usuarios. Úsalo solo para la cuenta del bot.`,
+    };
     const confirmed = await this.confirm.ask({
-      title: promote ? 'Dar permisos de administración' : 'Quitar permisos de administración',
-      message: promote
-        ? `${user.name} podrá entrar en este panel y crear, editar, ocultar y borrar cualquier contenido.`
-        : `${user.name} dejará de poder entrar en este panel.`,
-      confirmLabel: promote ? 'Hacer administrador' : 'Quitar permisos',
-      danger: !promote,
+      title: 'Cambiar rol',
+      message: consequences[role],
+      confirmLabel: 'Cambiar rol',
+      danger: user.role === 'ADMIN',
     });
-    if (!confirmed) return;
+    // El <select> ya muestra el valor nuevo: si no se confirma o falla, se devuelve al real.
+    if (!confirmed) {
+      select.value = user.role;
+      return;
+    }
 
     this.busyId.set(user.id);
-    this.users.updateRole(user.id, promote ? 'ADMIN' : 'USER').subscribe({
+    this.users.updateRole(user.id, role).subscribe({
       next: (updated) => {
-        this.notify.success(promote ? `${updated.name} ya es administrador.` : `${updated.name} ya no es administrador.`);
+        this.notify.success(`${updated.name} ahora tiene el rol ${this.roles.find((r) => r.value === updated.role)?.label.toLowerCase()}.`);
         this.busyId.set(null);
         this.stats.refresh();
         this.load();
       },
       error: (cause: unknown) => {
+        select.value = user.role;
         this.notify.error(toApiProblem(cause).message);
         this.busyId.set(null);
       },

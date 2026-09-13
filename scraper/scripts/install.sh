@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Instala o actualiza el scraper en la Orange Pi.
+#
+#   bash scraper/scripts/install.sh
+#
+# Deja el código en /opt/apps/rastrix-src (clon del repositorio) y los datos en
+# /opt/apps/rastrix-scraper: entorno virtual, .env (600), estado y logs.
+set -euo pipefail
+
+REPO_URL="https://github.com/devepsdev/rastrix.git"
+SRC_DIR="/opt/apps/rastrix-src"
+HOME_DIR="/opt/apps/rastrix-scraper"
+CRON_FILE="/etc/cron.d/rastrix-scraper"
+RUN_USER="$(id -un)"
+
+if [[ ! -d "$SRC_DIR/.git" ]]; then
+    echo "Clonando el repositorio en $SRC_DIR..."
+    sudo mkdir -p "$SRC_DIR"
+    sudo chown "$RUN_USER":"$RUN_USER" "$SRC_DIR"
+    git clone --quiet "$REPO_URL" "$SRC_DIR"
+else
+    echo "Actualizando el repositorio en $SRC_DIR..."
+    git -C "$SRC_DIR" pull --ff-only --quiet
+fi
+
+sudo mkdir -p "$HOME_DIR"
+sudo chown "$RUN_USER":"$RUN_USER" "$HOME_DIR"
+mkdir -p "$HOME_DIR/data" "$HOME_DIR/logs"
+
+if [[ ! -d "$HOME_DIR/venv" ]]; then
+    echo "Creando el entorno virtual..."
+    python3 -m venv "$HOME_DIR/venv"
+fi
+"$HOME_DIR/venv/bin/pip" install --quiet --upgrade pip
+"$HOME_DIR/venv/bin/pip" install --quiet -r "$SRC_DIR/scraper/requirements.txt"
+
+if [[ ! -f "$HOME_DIR/.env" ]]; then
+    cp "$SRC_DIR/scraper/.env.example" "$HOME_DIR/.env"
+    echo "Creado $HOME_DIR/.env: rellena la cuenta del bot y la clave de DeepSeek."
+fi
+# Contiene la contraseña del bot y la clave de DeepSeek: solo para su dueño.
+chmod 600 "$HOME_DIR/.env"
+chmod +x "$SRC_DIR/scraper/scripts/run_weekly.sh"
+
+sed "s/__RUN_USER__/$RUN_USER/" "$SRC_DIR/scraper/deploy/rastrix-scraper.cron" | sudo tee "$CRON_FILE" > /dev/null
+sudo chmod 644 "$CRON_FILE"
+
+echo "Scraper instalado. Prueba sin enviar nada con:"
+echo "  cd $SRC_DIR/scraper && SCRAPER_HOME=$HOME_DIR $HOME_DIR/venv/bin/python main.py --dry-run"

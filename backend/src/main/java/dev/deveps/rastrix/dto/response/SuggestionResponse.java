@@ -1,5 +1,6 @@
 package dev.deveps.rastrix.dto.response;
 
+import dev.deveps.rastrix.entities.SuggestionOrigin;
 import dev.deveps.rastrix.entities.SuggestionStatus;
 
 import java.time.LocalDate;
@@ -13,6 +14,8 @@ public record SuggestionResponse(
         Long userId,
         String userName,
         String userEmail,
+        SuggestionOrigin origin,
+        String sourceUrl,
         String name,
         String city,
         String province,

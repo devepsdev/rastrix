@@ -3,10 +3,11 @@
  * Long y BigDecimal -> number; LocalDate/LocalTime/LocalDateTime -> string ISO.
  */
 
-export type Role = 'USER' | 'ADMIN';
+export type Role = 'USER' | 'ADMIN' | 'SCRAPER';
 export type MarketFrequency = 'diario' | 'semanal' | 'quincenal' | 'mensual' | 'puntual';
 export type DayOfWeek = 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes' | 'sabado' | 'domingo';
 export type SuggestionStatus = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA';
+export type SuggestionOrigin = 'USUARIO' | 'SCRAPER';
 
 export interface PageResponse<T> {
   content: T[];
@@ -106,6 +107,9 @@ export interface SuggestionResponse {
   userId: number;
   userName: string | null;
   userEmail: string | null;
+  origin: SuggestionOrigin;
+  /** Página de la que salió; solo en las sugerencias del scraper. */
+  sourceUrl: string | null;
   name: string;
   city: string;
   province: string | null;

@@ -26,6 +26,14 @@ public class Suggestion extends BaseEntity {
     @Column(name = "usuario_id", nullable = false)
     private Long userId;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origen", length = 20, nullable = false)
+    private SuggestionOrigin origin;
+
+    /** Página de la que el scraper extrajo el mercado; vacío en las sugerencias de usuarios. */
+    @Column(name = "url_fuente", length = 500)
+    private String sourceUrl;
+
     @Column(name = "nombre", length = 150, nullable = false)
     private String name;
 

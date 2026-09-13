@@ -1,0 +1,5 @@
+# Scraper de Rastrix: una pasada a la semana, los lunes a las 06:00.
+# Lunes y no domingo: así recoge lo que los ayuntamientos publican para el fin
+# de semana siguiente y deja la semana entera para revisar la bandeja.
+SHELL=/bin/bash
+0 6 * * 1 __RUN_USER__ /opt/apps/rastrix-src/scraper/scripts/run_weekly.sh

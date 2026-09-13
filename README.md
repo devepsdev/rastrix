@@ -18,6 +18,7 @@ mercado, favoritos, valoraciones y notificaciones.
 ```
 backend/   API REST (Spring Boot 4, Java 25)
 admin/     Panel web de administración (Angular 21 + Tailwind 4)
+scraper/   Agente que extrae mercados de páginas web con DeepSeek (Python)
 frontend/  App Android (Expo / React Native) — en desarrollo
 db/        seed-demo.sql — catálogo de ejemplo para desarrollo local
 deploy/    Script de despliegue y configuración de Nginx para el servidor
@@ -172,9 +173,16 @@ Desde ahí se aprueban (`PUT /api/admin/suggestions/{id}/approve` con el
 en la app). Una sugerencia resuelta no se puede volver a tocar. Para frenar el
 spam, cada usuario puede tener como máximo 10 pendientes a la vez.
 
+Las que envía la cuenta con rol `SCRAPER` llevan `origin: SCRAPER` y
+`sourceUrl`, tienen un tope propio de 300 pendientes y se descartan con `409` si
+el mercado ya está en el catálogo o el scraper ya lo sugirió antes, aunque se
+rechazara.
+
 ### Roles y permisos
 
-Dos roles: `USER` (por defecto al registrarse) y `ADMIN`.
+Tres roles: `USER` (por defecto al registrarse), `ADMIN` y `SCRAPER` (la cuenta
+del scraper: permisos de usuario, pero sus sugerencias se marcan como
+automáticas, guardan la URL de origen y se deduplican).
 
 | Recurso | Lectura | Escritura |
 |---|---|---|
@@ -231,6 +239,14 @@ regístrate desde la app y asciéndela:
 ```bash
 mysql -u root rastrix -e "UPDATE usuarios SET role='ADMIN' WHERE email='tu@correo';"
 ```
+
+## Scraper
+
+Agente en Python (`scraper/`) que corre en la Orange Pi una vez por semana. Lee
+las páginas de `scraper/sources.yaml`, salta las que no han cambiado, extrae los
+mercados con DeepSeek, los valida y los envía a la bandeja de sugerencias. No
+publica nada por su cuenta. Detalles, instalación y pruebas en
+[scraper/README.md](scraper/README.md).
 
 ## Despliegue
 

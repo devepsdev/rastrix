@@ -3,6 +3,7 @@ package dev.deveps.rastrix.services;
 import dev.deveps.rastrix.dto.request.SuggestionRequest;
 import dev.deveps.rastrix.dto.response.PageResponse;
 import dev.deveps.rastrix.dto.response.SuggestionResponse;
+import dev.deveps.rastrix.entities.Role;
 import dev.deveps.rastrix.entities.SuggestionStatus;
 import org.springframework.data.domain.Pageable;
 
@@ -10,7 +11,8 @@ import java.util.List;
 
 public interface SuggestionService {
 
-    SuggestionResponse create(Long userId, SuggestionRequest request);
+    /** El rol decide el origen: las del rol SCRAPER se marcan como automáticas y se deduplican. */
+    SuggestionResponse create(Long userId, Role role, SuggestionRequest request);
 
     List<SuggestionResponse> findByUser(Long userId);
 

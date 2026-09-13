@@ -45,7 +45,14 @@
                   }
                 </div>
                 <p class="mt-0.5 text-sm text-ink-muted">{{ suggestion.city }}{{ suggestion.province ? ', ' + suggestion.province : '' }}</p>
-                <p class="mt-1 text-xs text-ink-faint">{{ suggestion.userName ?? 'Usuario eliminado' }} · {{ suggestion.fechaCreacion | date: 'd MMM, HH:mm' }}</p>
+                <p class="mt-1 flex items-center gap-2 text-xs text-ink-faint">
+                  @if (suggestion.origin === 'SCRAPER') {
+                    <span class="badge bg-support-soft text-support">Scraper</span>
+                  } @else {
+                    <span>{{ suggestion.userName ?? 'Usuario eliminado' }}</span>
+                  }
+                  <span>· {{ suggestion.fechaCreacion | date: 'd MMM, HH:mm' }}</span>
+                </p>
               </button>
             </li>
           }
@@ -93,12 +100,25 @@
           }
           <div>
             <dt class="label">Enviada por</dt>
-            <dd>{{ s.userName ?? 'Usuario eliminado' }}</dd>
-            @if (s.userEmail) { <dd class="text-sm text-ink-muted">{{ s.userEmail }}</dd> }
+            @if (s.origin === 'SCRAPER') {
+              <dd>Scraper automático</dd>
+            } @else {
+              <dd>{{ s.userName ?? 'Usuario eliminado' }}</dd>
+              @if (s.userEmail) { <dd class="text-sm text-ink-muted">{{ s.userEmail }}</dd> }
+            }
           </div>
+          @if (s.sourceUrl) {
+            <div class="sm:col-span-2">
+              <dt class="label">Fuente</dt>
+              <dd class="truncate">
+                <a [href]="s.sourceUrl" target="_blank" rel="noopener noreferrer" class="text-accent underline-offset-2 hover:underline">{{ s.sourceUrl }}</a>
+              </dd>
+              <dd class="mt-1 text-xs text-ink-faint">Datos extraídos automáticamente: compruébalos en la fuente antes de publicar.</dd>
+            </div>
+          }
           @if (s.comment) {
             <div class="sm:col-span-2 rounded-xl bg-sunken p-4">
-              <dt class="label">Comentario del usuario</dt>
+              <dt class="label">{{ s.origin === 'SCRAPER' ? 'Nota del scraper' : 'Comentario del usuario' }}</dt>
               <dd class="whitespace-pre-line text-sm leading-relaxed">{{ s.comment }}</dd>
             </div>
           }

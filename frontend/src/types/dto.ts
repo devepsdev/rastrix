@@ -3,11 +3,13 @@
  * Long -> number, BigDecimal -> number, LocalDate/LocalTime/LocalDateTime -> string (ISO-8601).
  */
 
-export type Role = "USER" | "ADMIN";
+export type Role = "USER" | "ADMIN" | "SCRAPER";
 
 export type MarketFrequency = "diario" | "semanal" | "quincenal" | "mensual" | "puntual";
 
 export type SuggestionStatus = "PENDIENTE" | "APROBADA" | "RECHAZADA";
+
+export type SuggestionOrigin = "USUARIO" | "SCRAPER";
 
 export type DayOfWeek =
   | "lunes"
@@ -275,6 +277,8 @@ export interface SuggestionResponse {
   userId: number;
   userName: string | null;
   userEmail: string | null;
+  origin: SuggestionOrigin;
+  sourceUrl: string | null;
   name: string;
   city: string;
   province: string | null;
