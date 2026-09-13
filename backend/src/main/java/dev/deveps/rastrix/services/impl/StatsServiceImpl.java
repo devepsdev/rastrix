@@ -2,6 +2,7 @@ package dev.deveps.rastrix.services.impl;
 
 import dev.deveps.rastrix.dto.response.StatsResponse;
 import dev.deveps.rastrix.entities.Role;
+import dev.deveps.rastrix.entities.SuggestionStatus;
 import dev.deveps.rastrix.repositories.CategoryRepository;
 import dev.deveps.rastrix.repositories.ExhibitorRepository;
 import dev.deveps.rastrix.repositories.FavoriteRepository;
@@ -9,6 +10,7 @@ import dev.deveps.rastrix.repositories.MarketImageRepository;
 import dev.deveps.rastrix.repositories.MarketRepository;
 import dev.deveps.rastrix.repositories.NotificationRepository;
 import dev.deveps.rastrix.repositories.RatingRepository;
+import dev.deveps.rastrix.repositories.SuggestionRepository;
 import dev.deveps.rastrix.repositories.UserRepository;
 import dev.deveps.rastrix.services.StatsService;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +30,7 @@ public class StatsServiceImpl implements StatsService {
     private final FavoriteRepository favoriteRepository;
     private final RatingRepository ratingRepository;
     private final NotificationRepository notificationRepository;
+    private final SuggestionRepository suggestionRepository;
 
     @Override
     public StatsResponse getStats() {
@@ -43,7 +46,8 @@ public class StatsServiceImpl implements StatsService {
                 ratingRepository.count(),
                 ratingRepository.findAverageScore(),
                 notificationRepository.count(),
-                notificationRepository.countByReadFalse()
+                notificationRepository.countByReadFalse(),
+                suggestionRepository.countByStatus(SuggestionStatus.PENDIENTE)
         );
     }
 

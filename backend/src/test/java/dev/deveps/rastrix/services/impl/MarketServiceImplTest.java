@@ -135,4 +135,20 @@ class MarketServiceImplTest {
         assertThat(result.created()).isTrue();
         assertThat(result.market().active()).isFalse();
     }
+
+    /** La app no debe ver mercados ocultos: pendientes de revisión o retirados a mano. */
+    @Test
+    void publicFindByIdDoesNotReturnHiddenMarkets() {
+        when(marketRepository.findByIdAndActiveTrue(3L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> marketService.findById(3L))
+                .isInstanceOf(dev.deveps.rastrix.exception.ResourceNotFoundException.class);
+    }
+
+    @Test
+    void adminFindByIdReturnsHiddenMarkets() {
+        when(marketRepository.findById(3L)).thenReturn(Optional.of(existing(3L, "Oculto", "Vic", false)));
+
+        assertThat(marketService.findByIdIncludingHidden(3L).active()).isFalse();
+    }
 }

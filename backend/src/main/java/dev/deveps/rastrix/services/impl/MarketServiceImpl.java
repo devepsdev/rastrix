@@ -64,13 +64,15 @@ public class MarketServiceImpl implements MarketService {
     @Override
     @Transactional(readOnly = true)
     public MarketResponse findById(Long id) {
-        return toResponse(findEntityById(id));
+        return marketRepository.findByIdAndActiveTrue(id)
+                .map(this::toResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("No existe ningún mercado con id: " + id));
     }
 
     @Override
     @Transactional(readOnly = true)
     public MarketResponse findByUuid(String uuid) {
-        return marketRepository.findByUuid(uuid)
+        return marketRepository.findByUuidAndActiveTrue(uuid)
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("No existe ningún mercado con uuid: " + uuid));
     }
@@ -78,19 +80,31 @@ public class MarketServiceImpl implements MarketService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<MarketResponse> findAll(Pageable pageable) {
-        return toPageResponse(marketRepository.findAll(pageable));
+        return toPageResponse(marketRepository.findByActiveTrue(pageable));
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<MarketResponse> findByCity(String city, Pageable pageable) {
-        return toPageResponse(marketRepository.findByCity(city, pageable));
+        return toPageResponse(marketRepository.findByCityAndActiveTrue(city, pageable));
     }
 
     @Override
     @Transactional(readOnly = true)
     public PageResponse<MarketResponse> findByProvince(String province, Pageable pageable) {
-        return toPageResponse(marketRepository.findByProvince(province, pageable));
+        return toPageResponse(marketRepository.findByProvinceAndActiveTrue(province, pageable));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MarketResponse findByIdIncludingHidden(Long id) {
+        return toResponse(findEntityById(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<MarketResponse> searchForAdmin(Boolean active, String query, Pageable pageable) {
+        return toPageResponse(marketRepository.searchForAdmin(active, normalize(query), pageable));
     }
 
     private Market findEntityById(Long id) {

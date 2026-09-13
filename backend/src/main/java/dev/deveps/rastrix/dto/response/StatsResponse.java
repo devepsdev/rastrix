@@ -13,7 +13,8 @@ public record StatsResponse(
         long totalRatings,
         Double averageRating,
         long totalNotifications,
-        long unreadNotifications
+        long unreadNotifications,
+        long pendingSuggestions
 
 ) {
 }

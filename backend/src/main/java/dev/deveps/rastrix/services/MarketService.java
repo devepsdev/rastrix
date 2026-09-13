@@ -22,6 +22,12 @@ public interface MarketService {
 
     void delete(Long id);
 
+    /** Panel de administración: incluye mercados ocultos. */
+    MarketResponse findByIdIncludingHidden(Long id);
+
+    /** Panel de administración: incluye ocultos, con filtros opcionales. */
+    PageResponse<MarketResponse> searchForAdmin(Boolean active, String query, Pageable pageable);
+
     MarketResponse findById(Long id);
 
     MarketResponse findByUuid(String uuid);
