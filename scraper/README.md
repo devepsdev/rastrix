@@ -54,9 +54,10 @@ cd /opt/apps/rastrix-src/scraper
 SCRAPER_HOME=/opt/apps/rastrix-scraper /opt/apps/rastrix-scraper/venv/bin/python main.py --dry-run
 ```
 
-La pasada automática queda en el crontab del usuario (lunes a las 06:00), con
-logs en `/opt/apps/rastrix-scraper/logs/`. Para actualizar código o fuentes,
-vuelve a ejecutar `install.sh`.
+La pasada automática la lanza el timer de systemd `rastrix-scraper.timer` (lunes a
+las 06:00), con logs en `/opt/apps/rastrix-scraper/logs/`. Si falla alguna fuente,
+la pasada termina con error y queda marcada como fallida (`systemctl status
+rastrix-scraper`). Para actualizar código o fuentes, vuelve a ejecutar `install.sh`.
 
 ## Desarrollo
 

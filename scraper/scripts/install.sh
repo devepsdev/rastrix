@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Instala o actualiza el scraper en la Orange Pi, sin necesitar sudo.
+# Instala o actualiza el scraper en la Orange Pi.
 #
 #   bash scraper/scripts/install.sh
 #
 # Deja el código en /opt/apps/rastrix-src (clon del repositorio) y los datos en
 # /opt/apps/rastrix-scraper: entorno virtual, .env (600), estado y logs. La
-# pasada semanal se programa en el crontab del usuario que lo ejecuta.
+# pasada semanal la lanza un timer de systemd que ejecuta el scraper como el
+# usuario que corre este script; instalarlo es lo único que pide sudo.
 #
 # /opt/apps pertenece a root: la primera vez hay que crear las dos carpetas con
 #   sudo install -d -o "$USER" -g "$USER" /opt/apps/rastrix-src /opt/apps/rastrix-scraper
@@ -15,10 +16,12 @@ REPO_URL="https://github.com/devepsdev/rastrix.git"
 SRC_DIR="/opt/apps/rastrix-src"
 HOME_DIR="/opt/apps/rastrix-scraper"
 RUN_USER="$(id -un)"
-CRON_TAG="# rastrix-scraper"
+UNIT="rastrix-scraper"
 # Lunes a las 06:00: recoge lo publicado para el fin de semana siguiente y deja
 # la semana entera para revisar la bandeja.
-CRON_LINE="0 6 * * 1 $SRC_DIR/scraper/scripts/run_weekly.sh $CRON_TAG"
+ON_CALENDAR="Mon *-*-* 06:00:00"
+# Marca con la que las instalaciones antiguas programaban la pasada en el crontab.
+CRON_TAG="# rastrix-scraper"
 
 for dir in "$SRC_DIR" "$HOME_DIR"; do
     if [[ ! -d "$dir" ]] && ! mkdir -p "$dir" 2>/dev/null; then
@@ -55,9 +58,45 @@ if [[ -f "$HOME_DIR/.env" ]]; then
     chmod 600 "$HOME_DIR/.env"
 fi
 
-# Se sustituye la línea anterior en vez de añadir otra en cada instalación.
-{ crontab -l 2>/dev/null | grep -v "$CRON_TAG" || true; echo "$CRON_LINE"; } | crontab -
-echo "Pasada semanal programada en el crontab de $RUN_USER (lunes 06:00)."
+# Pasada semanal con un timer de systemd: aparece en el monitor del servidor y, si
+# falla, queda marcada como fallida y se avisa. Solo se toca si falta o ha cambiado.
+UNITS_TMP="$(mktemp -d)"
+cat > "$UNITS_TMP/$UNIT.service" <<EOF
+[Unit]
+Description=Pasada semanal del scraper de Rastrix
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=$RUN_USER
+ExecStart=$SRC_DIR/scraper/scripts/run_weekly.sh
+Nice=10
+EOF
+cat > "$UNITS_TMP/$UNIT.timer" <<EOF
+[Unit]
+Description=Scraper de Rastrix los lunes a las 06:00
+
+[Timer]
+OnCalendar=$ON_CALENDAR
+
+[Install]
+WantedBy=timers.target
+EOF
+if ! cmp -s "$UNITS_TMP/$UNIT.service" "/etc/systemd/system/$UNIT.service" \
+    || ! cmp -s "$UNITS_TMP/$UNIT.timer" "/etc/systemd/system/$UNIT.timer"; then
+    echo "Instalando el timer de systemd $UNIT.timer (pide sudo)..."
+    sudo install -m 644 "$UNITS_TMP/$UNIT.service" "$UNITS_TMP/$UNIT.timer" /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now "$UNIT.timer"
+fi
+rm -rf "$UNITS_TMP"
+
+# Las instalaciones antiguas la programaban en el crontab: se quita para que no se lance dos veces.
+if crontab -l 2>/dev/null | grep -q "$CRON_TAG"; then
+    { crontab -l | grep -v "$CRON_TAG" || true; } | crontab -
+fi
+echo "Pasada semanal programada con el timer $UNIT.timer (lunes 06:00)."
 
 echo "Scraper instalado."
 if [[ ! -f "$HOME_DIR/.env" ]]; then
