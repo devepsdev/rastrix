@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs><clipPath id="letter"><rect width="64" height="49"/></clipPath></defs>
+  <g transform="translate(512 512) scale(11) translate(-32.9 -35.4)">
+  <g clip-path="url(#letter)" fill="none" stroke="#FFFFFF" stroke-width="6.5" stroke-linejoin="round">
+    <path d="M22 14.75v35"/>
+    <path d="M18.75 18H33a8.5 8.5 0 0 1 0 17H22"/>
+    <path d="M30 35l16 17"/>
+  </g>
+  <rect x="18.75" y="53" width="28" height="3" rx="1.5" fill="#FFFFFF"/>
+  </g>
+</svg>
